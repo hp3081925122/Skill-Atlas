@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "textures": {
     "background": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0003.png",
+      "texture": "skill_atlas:textures/gui/new_theme/background.png",
       "width": 32,
       "height": 32,
       "u": 0,
@@ -11,10 +11,10 @@
       "regionHeight": 32,
       "border": 3,
       "alpha": 1.0,
-      "tint": "#FF59626C"
+      "tint": "#FFFFFFFF"
     },
     "panel": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0003.png",
+      "texture": "skill_atlas:textures/gui/new_theme/panel.png",
       "width": 32,
       "height": 32,
       "u": 0,
@@ -23,10 +23,10 @@
       "regionHeight": 32,
       "border": 3,
       "alpha": 1.0,
-      "tint": "#FF59626C"
+      "tint": "#FFFFFFFF"
     },
     "sidebar": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0001.png",
+      "texture": "skill_atlas:textures/gui/new_theme/sidebar.png",
       "width": 32,
       "height": 32,
       "u": 0,
@@ -34,21 +34,23 @@
       "regionWidth": 32,
       "regionHeight": 32,
       "border": 3,
-      "alpha": 1.0
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "toolbar": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0003.png",
+      "texture": "skill_atlas:textures/gui/new_theme/toolbar.png",
       "width": 32,
       "height": 32,
       "u": 0,
       "v": 0,
       "regionWidth": 32,
       "regionHeight": 32,
-      "border": 3,
-      "alpha": 1.0
+      "border": 2,
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "canvas": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0008.png",
+      "texture": "skill_atlas:textures/gui/new_theme/canvas.png",
       "width": 32,
       "height": 32,
       "u": 0,
@@ -56,21 +58,23 @@
       "regionWidth": 32,
       "regionHeight": 32,
       "border": 3,
-      "alpha": 1.0
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "footer": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0003.png",
+      "texture": "skill_atlas:textures/gui/new_theme/footer.png",
       "width": 32,
       "height": 32,
       "u": 0,
       "v": 0,
       "regionWidth": 32,
       "regionHeight": 32,
-      "border": 3,
-      "alpha": 1.0
+      "border": 2,
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "button": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0000.png",
+      "texture": "skill_atlas:textures/gui/new_theme/button.png",
       "width": 32,
       "height": 32,
       "u": 0,
@@ -78,32 +82,35 @@
       "regionWidth": 32,
       "regionHeight": 32,
       "border": 3,
-      "alpha": 1.0
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "button_hover": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0013.png",
+      "texture": "skill_atlas:textures/gui/new_theme/button_hover.png",
       "width": 32,
       "height": 32,
       "u": 0,
       "v": 0,
       "regionWidth": 32,
       "regionHeight": 32,
-      "border": 5,
-      "alpha": 1.0
+      "border": 3,
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "button_pressed": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0014.png",
+      "texture": "skill_atlas:textures/gui/new_theme/button_pressed.png",
       "width": 32,
       "height": 32,
       "u": 0,
       "v": 0,
       "regionWidth": 32,
       "regionHeight": 32,
-      "border": 4,
-      "alpha": 1.0
+      "border": 3,
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "button_disabled": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0003.png",
+      "texture": "skill_atlas:textures/gui/new_theme/button_disabled.png",
       "width": 32,
       "height": 32,
       "u": 0,
@@ -111,134 +118,95 @@
       "regionWidth": 32,
       "regionHeight": 32,
       "border": 3,
-      "alpha": 1.0
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "input": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0003.png",
+      "texture": "skill_atlas:textures/gui/new_theme/input.png",
       "width": 32,
       "height": 32,
       "u": 0,
       "v": 0,
       "regionWidth": 32,
       "regionHeight": 32,
-      "border": 3,
+      "border": 2,
       "alpha": 1.0,
-      "tint": "#FF59626C"
+      "tint": "#FFFFFFFF"
     },
     "input_focus": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0022.png",
+      "texture": "skill_atlas:textures/gui/new_theme/input_focus.png",
       "width": 32,
       "height": 32,
       "u": 0,
       "v": 0,
       "regionWidth": 32,
       "regionHeight": 32,
-      "border": 4,
-      "alpha": 1.0
+      "border": 3,
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "category": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0014.png",
+      "texture": "skill_atlas:textures/gui/new_theme/category.png",
       "width": 32,
       "height": 32,
       "u": 0,
       "v": 0,
       "regionWidth": 32,
       "regionHeight": 32,
-      "border": 4,
-      "alpha": 1.0
+      "border": 3,
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "category_selected": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0013.png",
+      "texture": "skill_atlas:textures/gui/new_theme/category_selected.png",
       "width": 32,
       "height": 32,
       "u": 0,
       "v": 0,
       "regionWidth": 32,
       "regionHeight": 32,
-      "border": 5,
-      "alpha": 1.0
+      "border": 3,
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "result": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0003.png",
+      "texture": "skill_atlas:textures/gui/new_theme/result.png",
       "width": 32,
       "height": 32,
       "u": 0,
       "v": 0,
       "regionWidth": 32,
       "regionHeight": 32,
-      "border": 3,
+      "border": 2,
       "alpha": 1.0,
-      "tint": "#FF59626C"
+      "tint": "#FFFFFFFF"
     },
     "result_hover": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0022.png",
+      "texture": "skill_atlas:textures/gui/new_theme/result_hover.png",
       "width": 32,
       "height": 32,
       "u": 0,
       "v": 0,
       "regionWidth": 32,
       "regionHeight": 32,
-      "border": 4,
-      "alpha": 1.0
+      "border": 2,
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "node_locked": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0003.png",
+      "texture": "skill_atlas:textures/gui/new_theme/node_locked.png",
       "width": 32,
       "height": 32,
       "u": 0,
       "v": 0,
       "regionWidth": 32,
       "regionHeight": 32,
-      "border": 3,
+      "border": 2,
       "alpha": 1.0,
-      "tint": "#FF59626C"
+      "tint": "#FFFFFFFF"
     },
     "node_available": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0018.png",
-      "width": 32,
-      "height": 32,
-      "u": 0,
-      "v": 0,
-      "regionWidth": 32,
-      "regionHeight": 32,
-      "border": 6,
-      "alpha": 1.0
-    },
-    "node_learned": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0034.png",
-      "width": 32,
-      "height": 32,
-      "u": 0,
-      "v": 0,
-      "regionWidth": 32,
-      "regionHeight": 32,
-      "border": 4,
-      "alpha": 1.0
-    },
-    "node_mastered": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0007.png",
-      "width": 32,
-      "height": 32,
-      "u": 0,
-      "v": 0,
-      "regionWidth": 32,
-      "regionHeight": 32,
-      "border": 8,
-      "alpha": 1.0
-    },
-    "node_selected": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0022.png",
-      "width": 32,
-      "height": 32,
-      "u": 0,
-      "v": 0,
-      "regionWidth": 32,
-      "regionHeight": 32,
-      "border": 4,
-      "alpha": 1.0
-    },
-    "tooltip": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0003.png",
+      "texture": "skill_atlas:textures/gui/new_theme/node_available.png",
       "width": 32,
       "height": 32,
       "u": 0,
@@ -247,54 +215,106 @@
       "regionHeight": 32,
       "border": 3,
       "alpha": 1.0,
-      "tint": "#FF59626C"
+      "tint": "#FFFFFFFF"
+    },
+    "node_learned": {
+      "texture": "skill_atlas:textures/gui/new_theme/node_learned.png",
+      "width": 32,
+      "height": 32,
+      "u": 0,
+      "v": 0,
+      "regionWidth": 32,
+      "regionHeight": 32,
+      "border": 2,
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
+    },
+    "node_mastered": {
+      "texture": "skill_atlas:textures/gui/new_theme/node_mastered.png",
+      "width": 32,
+      "height": 32,
+      "u": 0,
+      "v": 0,
+      "regionWidth": 32,
+      "regionHeight": 32,
+      "border": 3,
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
+    },
+    "node_selected": {
+      "texture": "skill_atlas:textures/gui/new_theme/node_selected.png",
+      "width": 32,
+      "height": 32,
+      "u": 0,
+      "v": 0,
+      "regionWidth": 32,
+      "regionHeight": 32,
+      "border": 4,
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
+    },
+    "tooltip": {
+      "texture": "skill_atlas:textures/gui/new_theme/tooltip.png",
+      "width": 32,
+      "height": 32,
+      "u": 0,
+      "v": 0,
+      "regionWidth": 32,
+      "regionHeight": 32,
+      "border": 3,
+      "alpha": 0.95,
+      "tint": "#FFFFFFFF"
     },
     "scroll_track": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0008.png",
+      "texture": "skill_atlas:textures/gui/new_theme/scroll_track.png",
       "width": 32,
       "height": 32,
       "u": 0,
       "v": 0,
       "regionWidth": 32,
       "regionHeight": 32,
-      "border": 3,
-      "alpha": 1.0
+      "border": 2,
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "scroll_thumb": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0002.png",
+      "texture": "skill_atlas:textures/gui/new_theme/scroll_thumb.png",
       "width": 32,
       "height": 32,
       "u": 0,
       "v": 0,
       "regionWidth": 32,
       "regionHeight": 32,
-      "border": 3,
-      "alpha": 1.0
+      "border": 2,
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "selection": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0034.png",
+      "texture": "skill_atlas:textures/gui/new_theme/selection.png",
       "width": 32,
       "height": 32,
       "u": 0,
       "v": 0,
       "regionWidth": 32,
       "regionHeight": 32,
-      "border": 4,
-      "alpha": 0.4
+      "border": 2,
+      "alpha": 0.4,
+      "tint": "#FFFFFFFF"
     },
     "grid": {
-      "texture": "skill_atlas:textures/gui/kenney/small_0053.png",
+      "texture": "skill_atlas:textures/gui/new_theme/grid.png",
       "width": 16,
       "height": 16,
       "u": 7,
       "v": 7,
-      "regionWidth": 1,
-      "regionHeight": 1,
+      "regionWidth": 2,
+      "regionHeight": 2,
       "border": 0,
-      "alpha": 0.15
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "line_locked": {
-      "texture": "skill_atlas:textures/gui/kenney/small_0140.png",
+      "texture": "skill_atlas:textures/gui/new_theme/line_locked.png",
       "width": 16,
       "height": 16,
       "u": 7,
@@ -302,10 +322,11 @@
       "regionWidth": 1,
       "regionHeight": 1,
       "border": 0,
-      "alpha": 1.0
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "line_learned": {
-      "texture": "skill_atlas:textures/gui/kenney/small_0138.png",
+      "texture": "skill_atlas:textures/gui/new_theme/line_learned.png",
       "width": 16,
       "height": 16,
       "u": 7,
@@ -313,10 +334,11 @@
       "regionWidth": 1,
       "regionHeight": 1,
       "border": 0,
-      "alpha": 1.0
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "cursor": {
-      "texture": "skill_atlas:textures/gui/kenney/small_0140.png",
+      "texture": "skill_atlas:textures/gui/new_theme/cursor.png",
       "width": 16,
       "height": 16,
       "u": 7,
@@ -324,39 +346,41 @@
       "regionWidth": 1,
       "regionHeight": 1,
       "border": 0,
-      "alpha": 1.0
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     },
     "text_selection": {
-      "texture": "skill_atlas:textures/gui/kenney/large_0035.png",
+      "texture": "skill_atlas:textures/gui/new_theme/text_selection.png",
       "width": 32,
       "height": 32,
       "u": 0,
       "v": 0,
       "regionWidth": 32,
       "regionHeight": 32,
-      "border": 4,
-      "alpha": 1.0
+      "border": 1,
+      "alpha": 1.0,
+      "tint": "#FFFFFFFF"
     }
   },
   "colors": {
-    "title": "#FFF4DBA4",
+    "title": "#FFE5EDF0",
     "text": "#FFE5EDF0",
     "label": "#FFCFDCE2",
-    "muted": "#FFAABAC4",
-    "error": "#FFFF9580",
-    "success": "#FFBBDD98",
-    "button": "#FF47301E",
-    "button_disabled": "#FFAABAC4",
-    "category": "#FFF0D4A1",
-    "category_selected": "#FF47301E",
-    "points": "#FFF1D18B",
-    "experience": "#FFB9D3E7"
+    "muted": "#FF94A3B8",
+    "error": "#FFF87171",
+    "success": "#FF6EE7B7",
+    "button": "#FFE5EDF0",
+    "button_disabled": "#FF64748B",
+    "category": "#FFE5EDF0",
+    "category_selected": "#FF38BDF8",
+    "points": "#FFFBBF24",
+    "experience": "#FF6EE7B7"
   },
   "metrics": {
     "gridSpacing": 40,
     "gridSize": 2,
-    "lineWidth": 2,
-    "tooltipPadding": 8,
-    "tooltipMaxWidth": 360
+    "lineWidth": 3,
+    "tooltipPadding": 10,
+    "tooltipMaxWidth": 380
   }
 }
