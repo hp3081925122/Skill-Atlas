@@ -20,6 +20,7 @@ build
 # 本地运行文件
 eclipse
 run
+logs/
 
 # Forge 模板附带日志
 forge*changelog.txt
