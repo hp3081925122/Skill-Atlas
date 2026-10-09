@@ -1,0 +1,25 @@
+# Eclipse 文件
+bin
+*.launch
+.settings
+.metadata
+.classpath
+.project
+
+# IDEA 文件
+out
+*.ipr
+*.iws
+*.iml
+.idea
+
+# Gradle 缓存和构建产物
+build
+.gradle
+
+# 本地运行文件
+eclipse
+run
+
+# Forge 模板附带日志
+forge*changelog.txt
