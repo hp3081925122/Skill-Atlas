@@ -43,8 +43,15 @@ public final class Definition {
         public Node copy() { return JSON.fromJson(JSON.toJson(this), Node.class); }
     }
     public static final class Level {
+        public String pool = "";
         public long cost = 1;
+        public List<ItemCost> items = new ArrayList<>();
         public List<Reward> rewards = new ArrayList<>();
+    }
+    public static final class ItemCost {
+        public String item = "minecraft:diamond";
+        public int count = 1;
+        public String nbt = "";
     }
     public static final class Reward {
         public String type = "attribute";

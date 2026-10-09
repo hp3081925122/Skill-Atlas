@@ -23,6 +23,8 @@ public final class AtlasScreen extends Screen {
     private final Map<String, String> searchIndex = new LinkedHashMap<>();
     private final Map<String, ItemStack> icons = new HashMap<>();
     private final Map<String, Boolean> textures = new HashMap<>();
+    private final Map<String, Boolean> itemAvailability = new HashMap<>();
+    private int inventoryTick = -1;
     private Definition draft;
     private boolean editing, dirty, publishing;
     private Boolean pendingClose;
@@ -42,7 +44,7 @@ public final class AtlasScreen extends Screen {
     public void touch() { dirty = true; invalidateResources(); }
     public void rebaseDraft() { if (editing) { draft.revision = ClientState.definition.revision; touch(); } }
     public void refresh() { init(minecraft, width, height); }
-    public void invalidateResources() { searchIndex.clear(); icons.clear(); textures.clear(); }
+    public void invalidateResources() { searchIndex.clear(); icons.clear(); textures.clear(); itemAvailability.clear(); }
     public void receivedDefinition() {
         if (editing && !dirty) { draft = ClientState.definition.copy(); }
         if (editing && !ClientState.canEdit) { editing = false; draft = null; dirty = false; }
@@ -96,6 +98,7 @@ public final class AtlasScreen extends Screen {
     }
     @Override public void render(GuiGraphics g, int mx, int my, float partial) {
         mouseX = mx; mouseY = my;
+        if (minecraft.player != null && inventoryTick != minecraft.player.tickCount) { inventoryTick = minecraft.player.tickCount; itemAvailability.clear(); }
         String currentLanguage = minecraft.getLanguageManager().getSelected(); if (!currentLanguage.equals(language)) { language = currentLanguage; invalidateResources(); }
         g.fill(0, 0, width, height, 0xff101722); g.fill(0, top, left, height - 29, 0xff192333);
         g.drawString(font, title, 7, 11, 0xe4d8af);
@@ -124,8 +127,12 @@ public final class AtlasScreen extends Screen {
             double x = sx(n.x), y = sy(n.y), size = 15 * view().scale;
             if (x + size < left || x - size > width || y + size < top || y - size > height - 29) continue;
             int level = ClientState.progress.level(e.getKey()); boolean ready = AtlasLogic.ready(n, ClientState.progress);
-            String pool = data().categories.get(n.category).pool; long points = ClientState.progress.pools.getOrDefault(pool, new PlayerProgress.Balance()).points;
-            int color = selected.contains(e.getKey()) ? 0xff84c9ff : level >= n.levels.size() ? 0xffe7bf62 : level > 0 ? 0xff72bca2 : ready && points >= n.levels.get(level).cost ? 0xff8cb1dc : 0xff586273;
+            boolean affordable = false;
+            if (level < n.levels.size()) {
+                String pool = AtlasLogic.pointPool(data(), n, level); long points = ClientState.progress.pools.getOrDefault(pool, new PlayerProgress.Balance()).points;
+                affordable = points >= n.levels.get(level).cost && itemAvailability.computeIfAbsent(e.getKey() + ":" + level, key -> minecraft.player != null && ItemDelivery.available(minecraft.player.getInventory(), n.levels.get(level).items));
+            }
+            int color = selected.contains(e.getKey()) ? 0xff84c9ff : level >= n.levels.size() ? 0xffe7bf62 : level > 0 ? 0xff72bca2 : ready && affordable ? 0xff8cb1dc : 0xff586273;
             g.pose().pushPose(); g.pose().translate(x, y, 0); g.pose().scale((float)view().scale, (float)view().scale, 1);
             g.fill(-16, -16, 16, 16, color); g.fill(-14, -14, 14, 14, 0xff202c3e);
             renderIcon(g, e.getKey(), n);
@@ -164,7 +171,8 @@ public final class AtlasScreen extends Screen {
         int level = ClientState.progress.level(id);
         if (level > 0) for (var reward : n.levels.get(level - 1).rewards) lines.add(Component.literal(EditorScreens.rewardDescription(reward)));
         if (level < n.levels.size()) {
-            lines.add(Component.translatable("skill_atlas.cost_value", n.levels.get(level).cost));
+            lines.add(Component.translatable("skill_atlas.cost_value", EditorScreens.costDescription(data(), n, level)));
+            for (var item : n.levels.get(level).items) lines.add(Component.translatable("skill_atlas.item_cost_line", EditorScreens.itemDescription(item)));
             for (var reward : n.levels.get(level).rewards) lines.add(Component.translatable("skill_atlas.next_reward_line", EditorScreens.rewardDescription(reward)));
         }
         for (var r : n.prerequisites) { var parent = data().nodes.get(r.node); if (parent != null) lines.add(Component.translatable("skill_atlas.prerequisite_entry", AtlasLogic.visible(parent, ClientState.progress, editing) ? parent.name : FormScreen.tr("hidden_skill").getString(), r.level, ClientState.progress.level(r.node) >= r.level ? "✓" : "×")); }

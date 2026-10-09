@@ -63,6 +63,7 @@ tasks.named('test', Test).configure {
     useJUnitPlatform()
     testLogging { events 'failed', 'skipped' }
     dependsOn 'prepareTestClasspath'
+    inputs.files(testRuntime).withPropertyName('actualRuntimeClasspath').withNormalizer(ClasspathNormalizer)
     classpath = files(testBridge)
 }
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
