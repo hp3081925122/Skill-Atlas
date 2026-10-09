@@ -1,0 +1,11 @@
+Skill Atlas includes the following third-party libraries through Forge JarJar:
+
+TinyPinyin 2.0.3
+https://github.com/promeg/TinyPinyin
+Licensed under the Apache License, Version 2.0.
+The license text is included as LICENSE-TinyPinyin.txt.
+
+org.ahocorasick:ahocorasick 0.3.0
+https://github.com/robert-bor/aho-corasick
+Licensed under the Apache License, Version 2.0.
+The Apache 2.0 license text is included as LICENSE-ahocorasick.txt.

@@ -1,0 +1,68 @@
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+}
+version = project.mod_version
+group = project.mod_group_id
+base { archivesName = project.mod_id }
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+repositories {
+    mavenCentral()
+    maven { url 'https://maven.aliyun.com/repository/public'; content { includeGroup 'com.github.promeg' } }
+}
+jarJar.enable()
+minecraft {
+    mappings channel: project.mapping_channel, version: project.mapping_version
+    copyIdeResources = true
+    runs {
+        configureEach {
+            workingDirectory project.file('run')
+            property 'forge.logging.console.level', 'info'
+            mods { "${project.mod_id}" { source sourceSets.main } }
+        }
+        client {}
+        server { args '--nogui' }
+    }
+}
+dependencies {
+    minecraft "net.minecraftforge:forge:${project.minecraft_version}-${project.forge_version}"
+    implementation 'com.github.promeg:tinypinyin:2.0.3'
+    jarJar(group: 'com.github.promeg', name: 'tinypinyin', version: '[2.0.3,2.0.4)')
+    jarJar(group: 'org.ahocorasick', name: 'ahocorasick', version: '[0.3.0,0.3.1)')
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'com.google.code.gson:gson:2.10.1'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+}
+tasks.named('processResources', ProcessResources).configure {
+    def values = [mod_id: mod_id, mod_name: mod_name, mod_version: mod_version, mod_authors: mod_authors,
+                  mod_license: mod_license, mod_description: mod_description,
+                  loader_version_range: loader_version_range, forge_version_range: forge_version_range,
+                  minecraft_version_range: minecraft_version_range]
+    inputs.properties values
+    filesMatching(['META-INF/mods.toml']) { expand values }
+}
+tasks.named('jar', Jar).configure { archiveClassifier = 'slim'; finalizedBy 'reobfJar' }
+tasks.named('jarJar').configure { archiveClassifier = ''; finalizedBy 'reobfJarJar' }
+tasks.named('build').configure { dependsOn 'jarJar' }
+def testRuntime = sourceSets.test.runtimeClasspath
+def testBridge = new File(gradle.gradleUserHomeDir, "caches/skill-atlas-test-classpath/${Integer.toHexString(projectDir.absolutePath.hashCode())}/runtime.jar")
+tasks.register('prepareTestClasspath') {
+    dependsOn 'testClasses'
+    inputs.files(testRuntime)
+    outputs.file(testBridge)
+    doLast {
+        testBridge.parentFile.mkdirs()
+        def manifest = new java.util.jar.Manifest()
+        manifest.mainAttributes.putValue('Manifest-Version', '1.0')
+        manifest.mainAttributes.putValue('Class-Path', testRuntime.files.collect { it.toURI().toASCIIString() }.join(' '))
+        new java.util.jar.JarOutputStream(new FileOutputStream(testBridge), manifest).close()
+    }
+}
+tasks.named('test', Test).configure {
+    useJUnitPlatform()
+    testLogging { events 'failed', 'skipped' }
+    dependsOn 'prepareTestClasspath'
+    classpath = files(testBridge)
+}
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
