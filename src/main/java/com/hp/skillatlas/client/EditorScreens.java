@@ -100,7 +100,7 @@ public final class EditorScreens {
                 field("prerequisiteMode", () -> choice("prerequisiteMode", first.prerequisiteMode, "all", "any"));
                 action("levels", () -> levels(atlas, this, ids)); action("prerequisites", () -> prerequisites(atlas, this, ids));
                 action("delete", () -> {
-                    open(new net.minecraft.client.gui.screens.ConfirmScreen(ok -> { if (ok) { ids.forEach(atlas.data().nodes::remove); atlas.data().nodes.values().forEach(n -> n.prerequisites.removeIf(r -> ids.contains(r.node))); atlas.data().lines.removeIf(l -> ids.contains(l.from) || ids.contains(l.to)); atlas.touch(); open(atlas); } else open(this); }, tr("delete"), tr("delete_confirm")));
+                    open(new UiConfirmScreen(ok -> { if (ok) { ids.forEach(atlas.data().nodes::remove); atlas.data().nodes.values().forEach(n -> n.prerequisites.removeIf(r -> ids.contains(r.node))); atlas.data().lines.removeIf(l -> ids.contains(l.from) || ids.contains(l.to)); atlas.touch(); open(atlas); } else open(this); }, tr("delete"), tr("delete_confirm")));
                 });
             }
             @Override protected void save() {
@@ -345,7 +345,7 @@ public final class EditorScreens {
                 action("import", () -> send("import", false)); action("export", () -> send("export", true)); action("save_draft", () -> send("save_draft", true)); action("load_draft", () -> ClientState.request("load_draft"));
                 if (atlas.data().revision != ClientState.definition.revision) {
                     info("draft_conflict", label("draft_conflict_text"));
-                    action("rebase_draft", () -> open(new net.minecraft.client.gui.screens.ConfirmScreen(ok -> { if (ok) atlas.rebaseDraft(); open(this); }, tr("rebase_draft"), tr("rebase_confirm"))));
+                    action("rebase_draft", () -> open(new UiConfirmScreen(ok -> { if (ok) atlas.rebaseDraft(); open(this); }, tr("rebase_draft"), tr("rebase_confirm"))));
                 }
             }
             @Override protected void save() {}
