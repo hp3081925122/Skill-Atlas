@@ -61,20 +61,20 @@ public final class AtlasScreen extends Screen {
     @Override protected void init() {
         left = Math.min(130, Math.max(80, width / 4)); top = editing ? 80 : 55;
         if (!data().categories.containsKey(category)) category = categories().stream().findFirst().orElse("");
-        search = new EditBox(font, left + 5, 6, Math.max(70, width - left - 90), 20, FormScreen.tr("search"));
+        search = new UiEditBox(font, left + 5, 6, Math.max(70, width - left - 90), 20, FormScreen.tr("search"));
         search.setHint(FormScreen.tr("search_hint")); search.setMaxLength(256); search.setValue(query); search.setResponder(v -> { query = v; searchOffset = 0; }); addRenderableWidget(search);
         if (ClientState.canEdit) addRenderableWidget(Button.builder(FormScreen.tr(editing ? "view_mode" : "edit_mode"), b -> {
             if (editing && dirty) { closePrompt(false); return; }
             editing = !editing; if (editing) draft = ClientState.definition.copy(); selected.clear(); invalidateResources(); refresh();
-        }).bounds(width - 80, 6, 75, 20).build());
-        addRenderableWidget(Button.builder(FormScreen.tr("reset_view"), b -> VIEWS.put(category, new View())).bounds(5, 30, left - 10, 20).build());
+        }).bounds(width - 80, 6, 75, 20).build(UiButton::new));
+        addRenderableWidget(Button.builder(FormScreen.tr("reset_view"), b -> VIEWS.put(category, new View())).bounds(5, 30, left - 10, 20).build(UiButton::new));
         if (editing) {
             int w = Math.max(35, (width - left - 30) / 5), x = left + 5;
-            addRenderableWidget(Button.builder(FormScreen.tr("edit_selected"), b -> { if (!selected.isEmpty()) EditorScreens.node(this, selected); }).bounds(x, 30, w, 20).build());
-            addRenderableWidget(Button.builder(FormScreen.tr("manage"), b -> EditorScreens.manage(this)).bounds(x + w + 4, 30, w, 20).build());
-            addRenderableWidget(Button.builder(FormScreen.tr("links"), b -> EditorScreens.lines(this)).bounds(x + (w + 4) * 2, 30, w, 20).build());
-            addRenderableWidget(Button.builder(FormScreen.tr("files"), b -> EditorScreens.files(this)).bounds(x + (w + 4) * 3, 30, w, 20).build());
-            addRenderableWidget(Button.builder(FormScreen.tr("publish"), b -> publish()).bounds(x + (w + 4) * 4, 30, w, 20).build());
+            addRenderableWidget(Button.builder(FormScreen.tr("edit_selected"), b -> { if (!selected.isEmpty()) EditorScreens.node(this, selected); }).bounds(x, 30, w, 20).build(UiButton::new));
+            addRenderableWidget(Button.builder(FormScreen.tr("manage"), b -> EditorScreens.manage(this)).bounds(x + w + 4, 30, w, 20).build(UiButton::new));
+            addRenderableWidget(Button.builder(FormScreen.tr("links"), b -> EditorScreens.lines(this)).bounds(x + (w + 4) * 2, 30, w, 20).build(UiButton::new));
+            addRenderableWidget(Button.builder(FormScreen.tr("files"), b -> EditorScreens.files(this)).bounds(x + (w + 4) * 3, 30, w, 20).build(UiButton::new));
+            addRenderableWidget(Button.builder(FormScreen.tr("publish"), b -> publish()).bounds(x + (w + 4) * 4, 30, w, 20).build(UiButton::new));
         }
     }
     private List<String> categories() { return data().categories.entrySet().stream().sorted(Comparator.comparingInt(e -> e.getValue().order)).map(Map.Entry::getKey).toList(); }
@@ -100,27 +100,28 @@ public final class AtlasScreen extends Screen {
         mouseX = mx; mouseY = my;
         if (minecraft.player != null && inventoryTick != minecraft.player.tickCount) { inventoryTick = minecraft.player.tickCount; itemAvailability.clear(); }
         String currentLanguage = minecraft.getLanguageManager().getSelected(); if (!currentLanguage.equals(language)) { language = currentLanguage; invalidateResources(); }
-        g.fill(0, 0, width, height, 0xff101722); g.fill(0, top, left, height - 29, 0xff192333);
-        g.drawString(font, title, 7, 11, 0xe4d8af);
+        UiTheme.draw(g, "background", 0, 0, width, height); UiTheme.draw(g, "sidebar", 0, top, left, height - 29 - top);
+        UiTheme.draw(g, "canvas", left, top, width - left, height - 29 - top); UiTheme.draw(g, "toolbar", 0, 0, width, top); UiTheme.draw(g, "footer", 0, height - 29, width, 29);
+        g.drawString(font, title, 7, 11, UiTheme.color("title"));
         List<String> categories = categories(); int slots = Math.max(1, (height - top - 75) / 24); categoryScroll = Math.max(0, Math.min(categoryScroll, Math.max(0, categories.size() - slots)));
         for (int i = 0; i < slots && i + categoryScroll < categories.size(); i++) {
             String id = categories.get(i + categoryScroll); int y = top + 7 + i * 24;
-            if (id.equals(category)) g.fill(4, y - 3, left - 4, y + 17, 0xff354963);
-            g.drawString(font, font.plainSubstrByWidth(data().categories.get(id).name, left - 14), 8, y + 2, 0xffffff);
+            UiTheme.draw(g, id.equals(category) ? "category_selected" : "category", 4, y - 3, left - 8, 20);
+            g.drawString(font, font.plainSubstrByWidth(data().categories.get(id).name, left - 14), 8, y + 2, UiTheme.color(id.equals(category) ? "category_selected" : "category"));
         }
         if (data().categories.containsKey(category)) {
             String poolId = data().categories.get(category).pool; var pool = data().pools.get(poolId); var balance = ClientState.progress.pools.getOrDefault(poolId, new PlayerProgress.Balance());
-            g.drawString(font, font.plainSubstrByWidth(Component.translatable("skill_atlas.points", balance.points).getString(), left - 12), 6, height - 68, 0xe7cf91);
-            g.drawString(font, Component.translatable("skill_atlas.experience_level", balance.level), 6, height - 55, 0x93c4ef);
-            if (pool != null) g.drawString(font, font.plainSubstrByWidth(balance.experience + "/" + AtlasLogic.requirement(pool, balance.level), left - 12), 6, height - 42, 0x93c4ef);
+            g.drawString(font, font.plainSubstrByWidth(Component.translatable("skill_atlas.points", balance.points).getString(), left - 12), 6, height - 68, UiTheme.color("points"));
+            g.drawString(font, Component.translatable("skill_atlas.experience_level", balance.level), 6, height - 55, UiTheme.color("experience"));
+            if (pool != null) g.drawString(font, font.plainSubstrByWidth(balance.experience + "/" + AtlasLogic.requirement(pool, balance.level), left - 12), 6, height - 42, UiTheme.color("experience"));
         }
         g.enableScissor(left, top, width, height - 29);
-        int spacing = Math.max(8, (int)(40 * view().scale));
-        for (int x = left + Math.floorMod((int)sx(0) - left, spacing); x < width; x += spacing) for (int y = top + Math.floorMod((int)sy(0) - top, spacing); y < height - 29; y += spacing) g.fill(x, y, x + 1, y + 1, 0xff344153);
+        int spacing = Math.max(8, (int)(UiTheme.metric("gridSpacing") * view().scale));
+        for (int x = left + Math.floorMod((int)sx(0) - left, spacing); x < width; x += spacing) for (int y = top + Math.floorMod((int)sy(0) - top, spacing); y < height - 29; y += spacing) UiTheme.draw(g, "grid", x, y, UiTheme.metric("gridSize"), UiTheme.metric("gridSize"));
         for (var line : data().lines) {
             var a = data().nodes.get(line.from); var b = data().nodes.get(line.to);
             if (!line.visible || a == null || b == null || !a.category.equals(category) || !b.category.equals(category) || !AtlasLogic.visible(a, ClientState.progress, editing) || !AtlasLogic.visible(b, ClientState.progress, editing)) continue;
-            drawLine(g, sx(a.x), sy(a.y), sx(b.x), sy(b.y), ClientState.progress.level(line.from) > 0 && ClientState.progress.level(line.to) > 0 ? 0xffc8ab62 : 0xff56677d);
+            drawLine(g, sx(a.x), sy(a.y), sx(b.x), sy(b.y), ClientState.progress.level(line.from) > 0 && ClientState.progress.level(line.to) > 0);
         }
         for (var e : data().nodes.entrySet()) {
             var n = e.getValue(); if (!n.category.equals(category) || !AtlasLogic.visible(n, ClientState.progress, editing)) continue;
@@ -132,23 +133,23 @@ public final class AtlasScreen extends Screen {
                 String pool = AtlasLogic.pointPool(data(), n, level); long points = ClientState.progress.pools.getOrDefault(pool, new PlayerProgress.Balance()).points;
                 affordable = points >= n.levels.get(level).cost && itemAvailability.computeIfAbsent(e.getKey() + ":" + level, key -> minecraft.player != null && ItemDelivery.available(minecraft.player.getInventory(), n.levels.get(level).items));
             }
-            int color = selected.contains(e.getKey()) ? 0xff84c9ff : level >= n.levels.size() ? 0xffe7bf62 : level > 0 ? 0xff72bca2 : ready && affordable ? 0xff8cb1dc : 0xff586273;
+            String texture = selected.contains(e.getKey()) ? "node_selected" : level >= n.levels.size() ? "node_mastered" : level > 0 ? "node_learned" : ready && affordable ? "node_available" : "node_locked";
             g.pose().pushPose(); g.pose().translate(x, y, 0); g.pose().scale((float)view().scale, (float)view().scale, 1);
-            g.fill(-16, -16, 16, 16, color); g.fill(-14, -14, 14, 14, 0xff202c3e);
+            UiTheme.draw(g, texture, -16, -16, 32, 32);
             renderIcon(g, e.getKey(), n);
-            g.drawCenteredString(font, level + "/" + n.levels.size(), 0, 18, 0xffffff); g.pose().popPose();
-            if (view().scale >= 0.7) g.drawCenteredString(font, font.plainSubstrByWidth(n.name, 140), (int)x, (int)(y - size - 13), 0xdce5ef);
+            g.drawCenteredString(font, level + "/" + n.levels.size(), 0, 18, UiTheme.color("text")); g.pose().popPose();
+            if (view().scale >= 0.7) g.drawCenteredString(font, font.plainSubstrByWidth(n.name, 140), (int)x, (int)(y - size - 13), UiTheme.color("text"));
         }
         if (boxing) {
             int x1 = (int)Math.min(startX, mx), x2 = (int)Math.max(startX, mx), y1 = (int)Math.min(startY, my), y2 = (int)Math.max(startY, my);
-            g.fill(x1, y1, x2, y2, 0x335ca4e8); g.renderOutline(x1, y1, x2 - x1, y2 - y1, 0xff84c9ff);
+            UiTheme.draw(g, "selection", x1, y1, x2 - x1, y2 - y1);
         }
         List<String> results = results();
         int resultSlots = Math.max(1, (height - top - 29) / 23); searchOffset = Math.max(0, Math.min(searchOffset, Math.max(0, results.size() - resultSlots)));
-        for (int i = 0; i < resultSlots && i + searchOffset < results.size(); i++) { int y = top + i * 23; g.fill(left + 5, y, width - 5, y + 22, 0xf02b3c52); var n = data().nodes.get(results.get(i + searchOffset)); g.drawString(font, font.plainSubstrByWidth(n.name + "  [" + data().categories.get(n.category).name + "]", width - left - 20), left + 10, y + 7, 0xffffff); }
+        for (int i = 0; i < resultSlots && i + searchOffset < results.size(); i++) { int y = top + i * 23; UiTheme.draw(g, mx >= left + 5 && mx < width - 5 && my >= y && my < y + 22 ? "result_hover" : "result", left + 5, y, width - left - 10, 22); var n = data().nodes.get(results.get(i + searchOffset)); g.drawString(font, font.plainSubstrByWidth(n.name + "  [" + data().categories.get(n.category).name + "]", width - left - 20), left + 10, y + 7, UiTheme.color("text")); }
         g.disableScissor();
-        if (editing) g.drawString(font, Component.translatable("skill_atlas.selection", selected.size()), left + 5, 58, 0xaec8df);
-        g.drawString(font, font.plainSubstrByWidth(status.getString().isBlank() ? FormScreen.tr(editing ? "editor_help" : "viewer_help").getString() : status.getString(), width - 12), 6, height - 20, 0xc4d0df);
+        if (editing) g.drawString(font, Component.translatable("skill_atlas.selection", selected.size()), left + 5, 58, UiTheme.color("label"));
+        g.drawString(font, font.plainSubstrByWidth(status.getString().isBlank() ? FormScreen.tr(editing ? "editor_help" : "viewer_help").getString() : status.getString(), width - 12), 6, height - 20, UiTheme.color("muted"));
         super.render(g, mx, my, partial);
         if (canvas(mx, my) && results.isEmpty()) { String id = hit(mx, my); if (id != null) tooltip(g, id, mx, my); }
     }
@@ -176,16 +177,16 @@ public final class AtlasScreen extends Screen {
             for (var reward : n.levels.get(level).rewards) lines.add(Component.translatable("skill_atlas.next_reward_line", EditorScreens.rewardDescription(reward)));
         }
         for (var r : n.prerequisites) { var parent = data().nodes.get(r.node); if (parent != null) lines.add(Component.translatable("skill_atlas.prerequisite_entry", AtlasLogic.visible(parent, ClientState.progress, editing) ? parent.name : FormScreen.tr("hidden_skill").getString(), r.level, ClientState.progress.level(r.node) >= r.level ? "✓" : "×")); }
-        g.renderComponentTooltip(font, lines, x, y);
+        UiTheme.tooltip(g, lines, x, y, width, height);
     }
-    private void drawLine(GuiGraphics g, double x1, double y1, double x2, double y2, int color) {
+    private void drawLine(GuiGraphics g, double x1, double y1, double x2, double y2, boolean learned) {
         double dx = x2 - x1, dy = y2 - y1, t0 = 0, t1 = 1;
         double[] p = {-dx, dx, -dy, dy}, q = {x1 - left, width - x1, y1 - top, height - 29 - y1};
         for (int i = 0; i < 4; i++) { if (p[i] == 0) { if (q[i] < 0) return; } else { double t = q[i] / p[i]; if (p[i] < 0) t0 = Math.max(t0, t); else t1 = Math.min(t1, t); } }
         if (t0 > t1) return;
         double ax = x1 + dx * t0, ay = y1 + dy * t0, bx = x1 + dx * t1, by = y1 + dy * t1;
         g.pose().pushPose(); g.pose().translate(ax, ay, 0); g.pose().mulPose(Axis.ZP.rotation((float)Math.atan2(by - ay, bx - ax)));
-        g.fill(0, -1, Math.max(1, (int)Math.ceil(Math.hypot(bx - ax, by - ay))), 1, color); g.pose().popPose();
+        UiTheme.draw(g, learned ? "line_learned" : "line_locked", 0, -UiTheme.metric("lineWidth") / 2, Math.max(1, (int)Math.ceil(Math.hypot(bx - ax, by - ay))), UiTheme.metric("lineWidth")); g.pose().popPose();
     }
     @Override public boolean mouseClicked(double x, double y, int button) {
         if (super.mouseClicked(x, y, button)) return true;
@@ -239,12 +240,12 @@ public final class AtlasScreen extends Screen {
     }
     private void pastePrompt() {
         double x = wx(mouseX), y = wy(mouseY); String target = category;
-        minecraft.setScreen(new ConfirmScreen(keep -> { minecraft.setScreen(this); selected.clear(); selected.addAll(clipboard.paste(data(), target, x, y, keep)); touch(); }, FormScreen.tr("paste"), FormScreen.tr("paste_external"), FormScreen.tr("keep_external"), FormScreen.tr("internal_only")) {
+        minecraft.setScreen(new UiConfirmScreen(keep -> { minecraft.setScreen(this); selected.clear(); selected.addAll(clipboard.paste(data(), target, x, y, keep)); touch(); }, FormScreen.tr("paste"), FormScreen.tr("paste_external"), FormScreen.tr("keep_external"), FormScreen.tr("internal_only")) {
             @Override public boolean keyPressed(int key, int scan, int modifiers) { if (key == GLFW.GLFW_KEY_ESCAPE) { minecraft.setScreen(AtlasScreen.this); return true; } return super.keyPressed(key, scan, modifiers); }
         });
     }
     private void deletePrompt() {
-        minecraft.setScreen(new ConfirmScreen(ok -> { minecraft.setScreen(this); if (ok) { selected.forEach(data().nodes::remove); data().nodes.values().forEach(n -> n.prerequisites.removeIf(r -> selected.contains(r.node))); data().lines.removeIf(l -> selected.contains(l.from) || selected.contains(l.to)); selected.clear(); touch(); } }, FormScreen.tr("delete"), FormScreen.tr("delete_confirm")));
+        minecraft.setScreen(new UiConfirmScreen(ok -> { minecraft.setScreen(this); if (ok) { selected.forEach(data().nodes::remove); data().nodes.values().forEach(n -> n.prerequisites.removeIf(r -> selected.contains(r.node))); data().lines.removeIf(l -> selected.contains(l.from) || selected.contains(l.to)); selected.clear(); touch(); } }, FormScreen.tr("delete"), FormScreen.tr("delete_confirm")));
     }
     private void publish() {
         List<String> errors;

@@ -22,7 +22,7 @@ public final class ClientEvents {
     public static final class Registration {
         @SubscribeEvent public static void keys(RegisterKeyMappingsEvent e) { e.register(OPEN); }
         @SubscribeEvent public static void reload(RegisterClientReloadListenersEvent e) {
-            e.registerReloadListener((ResourceManagerReloadListener) manager -> { if (ClientState.screen != null) ClientState.screen.invalidateResources(); });
+            e.registerReloadListener((ResourceManagerReloadListener) manager -> { UiTheme.reload(manager); if (ClientState.screen != null) ClientState.screen.invalidateResources(); });
         }
     }
 }

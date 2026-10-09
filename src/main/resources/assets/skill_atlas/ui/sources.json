@@ -1,0 +1,25 @@
+{
+  "author": "Kenney (www.kenney.nl)",
+  "license": "CC0-1.0",
+  "page": "https://kenney.nl/assets/ui-pack-pixel-adventure",
+  "archive": "https://kenney.nl/media/pages/assets/ui-pack-pixel-adventure/405ba5278a-1729196257/kenney_ui-pack-pixel-adventure.zip",
+  "usage": "Selected original PNG files, unchanged. Region selection, nine-slice scaling and opacity occur at runtime.",
+  "files": {
+    "large_0008.png": "Tiles/Large tiles/Thin outline/tile_0008.png",
+    "large_0009.png": "Tiles/Large tiles/Thin outline/tile_0009.png",
+    "large_0001.png": "Tiles/Large tiles/Thin outline/tile_0001.png",
+    "large_0003.png": "Tiles/Large tiles/Thin outline/tile_0003.png",
+    "large_0000.png": "Tiles/Large tiles/Thin outline/tile_0000.png",
+    "large_0013.png": "Tiles/Large tiles/Thin outline/tile_0013.png",
+    "large_0014.png": "Tiles/Large tiles/Thin outline/tile_0014.png",
+    "large_0022.png": "Tiles/Large tiles/Thin outline/tile_0022.png",
+    "large_0018.png": "Tiles/Large tiles/Thin outline/tile_0018.png",
+    "large_0034.png": "Tiles/Large tiles/Thin outline/tile_0034.png",
+    "large_0007.png": "Tiles/Large tiles/Thin outline/tile_0007.png",
+    "large_0002.png": "Tiles/Large tiles/Thin outline/tile_0002.png",
+    "small_0053.png": "Tiles/Small tiles/Thin outline/tile_0053.png",
+    "small_0140.png": "Tiles/Small tiles/Thin outline/tile_0140.png",
+    "small_0138.png": "Tiles/Small tiles/Thin outline/tile_0138.png",
+    "large_0035.png": "Tiles/Large tiles/Thin outline/tile_0035.png"
+  }
+}
