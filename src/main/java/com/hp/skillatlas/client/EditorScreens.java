@@ -18,35 +18,39 @@ public final class EditorScreens {
     private static String label(String key) { return FormScreen.tr(key).getString(); }
     public static String rewardDescription(Definition.Reward r) {
         return switch (r.type) {
-            case "attribute" -> label("reward_attribute") + " " + r.target + " " + r.amount + " (" + label("value." + r.operation) + ")";
-            case "effect" -> label("reward_effect") + " " + r.target + " " + (r.amplifier + 1) + " / " + r.interval + " tick";
-            default -> label("reward_immunity") + " " + String.join(", ", r.effects);
+            case "attribute" -> label("reward_attribute") + " " + registeredName("attribute", r.target) + " " + r.amount + " (" + label("value." + r.operation) + ")";
+            case "effect" -> label("reward_effect") + " " + registeredName("effect", r.target) + " " + (r.amplifier + 1) + " / " + r.interval + " tick";
+            default -> label("reward_immunity") + " " + String.join(", ", r.effects.stream().map(id -> registeredName("effect", id)).toList());
         };
     }
-    private static List<SearchListScreen.Entry> registry(String type) {
-        return ClientState.registries.getOrDefault(type, List.of()).stream().map(id -> {
-            String name = id; var key = ResourceLocation.tryParse(id);
-            if (key != null) {
-                if (type.equals("item")) { var item = ForgeRegistries.ITEMS.getValue(key); if (item != null) name = Component.translatable(item.getDescriptionId()).getString(); }
-                if (type.equals("effect")) { var effect = ForgeRegistries.MOB_EFFECTS.getValue(key); if (effect != null) name = effect.getDisplayName().getString(); }
-                if (type.equals("attribute")) { var attribute = ForgeRegistries.ATTRIBUTES.getValue(key); if (attribute != null) name = Component.translatable(attribute.getDescriptionId()).getString(); }
-            }
-            return new SearchListScreen.Entry(id, name);
-        }).toList();
+    private static String registeredName(String type, String id) {
+        if (id.startsWith("#")) return label(id.equals("#forge:ores") ? "tag_ores" : "tag_target");
+        var key = ResourceLocation.tryParse(id); if (key == null) return label("unknown_target");
+        return switch (type) {
+            case "item" -> { var item = ForgeRegistries.ITEMS.getValue(key); yield item == null ? label("unknown_target") : Component.translatable(item.getDescriptionId()).getString(); }
+            case "effect" -> { var effect = ForgeRegistries.MOB_EFFECTS.getValue(key); yield effect == null ? label("unknown_target") : effect.getDisplayName().getString(); }
+            case "attribute" -> { var attribute = ForgeRegistries.ATTRIBUTES.getValue(key); yield attribute == null ? label("unknown_target") : Component.translatable(attribute.getDescriptionId()).getString(); }
+            case "kill" -> { var entity = ForgeRegistries.ENTITY_TYPES.getValue(key); yield entity == null ? label("unknown_target") : entity.getDescription().getString(); }
+            case "mine" -> { var block = ForgeRegistries.BLOCKS.getValue(key); yield block == null ? label("unknown_target") : block.getName().getString(); }
+            default -> label("unknown_target");
+        };
     }
-    private static List<SearchListScreen.Entry> nodes(Definition d) { return d.nodes.entrySet().stream().map(e -> new SearchListScreen.Entry(e.getKey(), e.getValue().name + " / " + d.categories.get(e.getValue().category).name)).toList(); }
-    private static List<SearchListScreen.Entry> categories(Definition d) { return d.categories.entrySet().stream().map(e -> new SearchListScreen.Entry(e.getKey(), e.getValue().name)).toList(); }
-    private static List<SearchListScreen.Entry> pools(Definition d) { return d.pools.entrySet().stream().map(e -> new SearchListScreen.Entry(e.getKey(), e.getValue().name)).toList(); }
+    private static String nodeName(Definition d, String id) { var node = d.nodes.get(id); return node == null ? label("unknown_target") : DisplayNames.text(node.name); }
+    private static List<SearchListScreen.Entry> registry(String type) {
+        return ClientState.registries.getOrDefault(type, List.of()).stream().map(id -> new SearchListScreen.Entry(id, registeredName(type, id))).toList();
+    }
+    private static List<SearchListScreen.Entry> nodes(Definition d) { return d.nodes.entrySet().stream().map(e -> new SearchListScreen.Entry(e.getKey(), DisplayNames.text(e.getValue().name) + " · " + DisplayNames.text(d.categories.get(e.getValue().category).name))).toList(); }
+    private static List<SearchListScreen.Entry> categories(Definition d) { return d.categories.entrySet().stream().map(e -> new SearchListScreen.Entry(e.getKey(), DisplayNames.text(e.getValue().name))).toList(); }
+    private static List<SearchListScreen.Entry> pools(Definition d) { return d.pools.entrySet().stream().map(e -> new SearchListScreen.Entry(e.getKey(), DisplayNames.text(e.getValue().name))).toList(); }
     private static List<SearchListScreen.Entry> costPools(Definition d) {
         List<SearchListScreen.Entry> result = new ArrayList<>(); result.add(new SearchListScreen.Entry("", label("inherit_pool"))); result.addAll(pools(d)); return result;
     }
     public static String costDescription(Definition d, Definition.Node n, int index) {
         String pool = AtlasLogic.pointPool(d, n, index); var definition = d.pools.get(pool);
-        return n.levels.get(index).cost + " " + (definition == null ? pool : definition.name) + " [" + pool + "]";
+        return n.levels.get(index).cost + " " + (definition == null ? label("unknown_target") : DisplayNames.text(definition.name));
     }
     public static String itemDescription(Definition.ItemCost item) {
-        var id = ResourceLocation.tryParse(item.item); var value = id == null ? null : ForgeRegistries.ITEMS.getValue(id);
-        String name = value == null ? item.item : Component.translatable(value.getDescriptionId()).getString();
+        String name = registeredName("item", item.item);
         return name + " × " + item.count + (item.nbt.isBlank() ? "" : " " + item.nbt);
     }
     public static void detail(AtlasScreen atlas, String id) {
@@ -54,8 +58,8 @@ public final class EditorScreens {
             @Override protected void build() {
                 var n = ClientState.definition.nodes.get(id); if (n == null) return;
                 int current = ClientState.progress.level(id);
-                info("name", n.name); info("level", current + " / " + n.levels.size());
-                for (String line : n.tooltip.split("\\n")) info("tooltip", line);
+                info("name", DisplayNames.text(n.name)); info("level", current + " / " + n.levels.size());
+                for (String line : DisplayNames.text(n.tooltip).split("\\n")) info("tooltip", line);
                 if (current > 0) for (var r : n.levels.get(current - 1).rewards) info("current_rewards", rewardDescription(r));
                 if (current < n.levels.size()) {
                     var next = n.levels.get(current); info("cost", costDescription(ClientState.definition, n, current));
@@ -70,7 +74,7 @@ public final class EditorScreens {
                     });
                 }
                 info("prerequisite_mode", label("value." + n.prerequisiteMode));
-                for (var p : n.prerequisites) { var parent = ClientState.definition.nodes.get(p.node); if (parent != null) info("prerequisites", (AtlasLogic.visible(parent, ClientState.progress, false) ? parent.name : label("hidden_skill")) + " ≥ " + p.level + (ClientState.progress.level(p.node) >= p.level ? " ✓" : " ×")); }
+                for (var p : n.prerequisites) { var parent = ClientState.definition.nodes.get(p.node); if (parent != null) info("prerequisites", (AtlasLogic.visible(parent, ClientState.progress, false) ? DisplayNames.text(parent.name) : label("hidden_skill")) + " ≥ " + p.level + (ClientState.progress.level(p.node) >= p.level ? " ✓" : " ×")); }
             }
             @Override protected void save() {}
         });
@@ -90,7 +94,7 @@ public final class EditorScreens {
             private boolean applies(String key) { return !batch || bool("apply_" + key); }
             @Override protected void build() {
                 info("selection", Integer.toString(ids.size()));
-                field("name", () -> text("name", first.name)); field("tooltip", () -> text("tooltip", first.tooltip, true)); field("aliases", () -> text("aliases", first.aliases));
+                field("name", () -> text("name", DisplayNames.text(first.name))); field("tooltip", () -> text("tooltip", DisplayNames.text(first.tooltip), true)); field("aliases", () -> text("aliases", first.aliases));
                 field("category", () -> pick("category", first.category, categories(atlas.data())));
                 field("iconType", () -> choice("iconType", first.iconType, "item", "texture"));
                 field("icon", () -> pick("icon", first.icon, registry("item"))); field("iconNbt", () -> text("iconNbt", first.iconNbt, true));
@@ -107,7 +111,7 @@ public final class EditorScreens {
                 List<Definition.Node> changed = new ArrayList<>();
                 for (String id : ids) {
                     Definition.Node n = atlas.data().nodes.get(id).copy();
-                    if (applies("name")) n.name = value("name"); if (applies("tooltip")) n.tooltip = value("tooltip"); if (applies("aliases")) n.aliases = value("aliases");
+                    if (applies("name")) n.name = DisplayNames.edited(n.name, value("name")); if (applies("tooltip")) n.tooltip = DisplayNames.edited(n.tooltip, value("tooltip")); if (applies("aliases")) n.aliases = value("aliases");
                     if (applies("category")) { if (!atlas.data().categories.containsKey(value("category"))) throw new IllegalArgumentException(label("error.category")); n.category = value("category"); }
                     if (applies("iconType")) n.iconType = value("iconType"); if (applies("icon")) n.icon = value("icon"); if (applies("iconNbt")) n.iconNbt = value("iconNbt");
                     if (applies("x")) n.x = decimal("x"); if (applies("y")) n.y = decimal("y");
@@ -225,7 +229,7 @@ public final class EditorScreens {
             @Override protected void build() {
                 if (ids.size() > 1) info("batch_replace", label("batch_replace_prerequisites"));
                 choice("draw_lines", "false", "false", "true");
-                for (int i = 0; i < requirements.size(); i++) { int at = i; var r = requirements.get(i); actionText(r.node + " ≥ " + r.level, () -> requirement(this, r, value -> { requirements.set(at, value); open(this); }, () -> { requirements.remove(at); open(this); }, atlas.data())); }
+                for (int i = 0; i < requirements.size(); i++) { int at = i; var r = requirements.get(i); actionText(nodeName(atlas.data(), r.node) + " ≥ " + r.level, () -> requirement(this, r, value -> { requirements.set(at, value); open(this); }, () -> { requirements.remove(at); open(this); }, atlas.data())); }
                 action("new_prerequisite", () -> requirement(this, new Definition.Requirement(), r -> { requirements.add(r); open(this); }, () -> open(this), atlas.data()));
             }
             @Override protected void save() {
@@ -246,7 +250,7 @@ public final class EditorScreens {
     public static void lines(AtlasScreen atlas) {
         open(new FormScreen(atlas, "links") {
             @Override protected void build() {
-                for (int i = 0; i < atlas.data().lines.size(); i++) { int at = i; var line = atlas.data().lines.get(i); actionText(line.from + " → " + line.to, () -> line(atlas, this, line, at)); }
+                for (int i = 0; i < atlas.data().lines.size(); i++) { int at = i; var line = atlas.data().lines.get(i); actionText(nodeName(atlas.data(), line.from) + " → " + nodeName(atlas.data(), line.to), () -> line(atlas, this, line, at)); }
                 action("new_line", () -> line(atlas, this, new Definition.Line(), -1));
             }
             @Override protected void save() {}
@@ -273,39 +277,39 @@ public final class EditorScreens {
     }
     private static void categoryList(AtlasScreen atlas, Screen parent) {
         open(new FormScreen(parent, "categories") {
-            @Override protected void build() { atlas.data().categories.forEach((id, c) -> actionText(c.name + " [" + id + "]", () -> category(atlas, this, id))); action("new_category", () -> category(atlas, this, null)); }
+            @Override protected void build() { atlas.data().categories.forEach((id, c) -> actionText(DisplayNames.text(c.name), () -> category(atlas, this, id))); action("new_category", () -> category(atlas, this, null)); }
             @Override protected void save() {}
         });
     }
     private static void category(AtlasScreen atlas, Screen parent, String id) {
         var source = id == null ? new Definition.Category() : atlas.data().categories.get(id);
         open(new FormScreen(parent, "category_editor") {
-            @Override protected void build() { if (id == null) text("id", "category_" + (atlas.data().categories.size() + 1)); else info("id", id); text("name", source.name); pick("pool", source.pool, pools(atlas.data())); text("order", Integer.toString(source.order));
+            @Override protected void build() { if (id == null) text("id", "category_" + (atlas.data().categories.size() + 1)); else info("id", id); text("name", DisplayNames.text(source.name)); pick("pool", source.pool, pools(atlas.data())); text("order", Integer.toString(source.order));
                 if (id != null) action("delete", () -> { if (atlas.data().nodes.values().stream().anyMatch(n -> n.category.equals(id))) { atlas.status(tr("error.category_in_use"), "error"); return; } atlas.data().categories.remove(id); atlas.touch(); open(parent); });
             }
             @Override protected void save() {
                 String key = id == null ? value("id") : id;
                 if (!AtlasLogic.id(key) || (id == null && atlas.data().categories.containsKey(key)) || !atlas.data().pools.containsKey(value("pool"))) throw new IllegalArgumentException(label("error.category"));
-                var c = new Definition.Category(); c.name = value("name"); c.pool = value("pool"); c.order = integer("order"); atlas.data().categories.put(key, c); atlas.touch();
+                var c = new Definition.Category(); c.name = DisplayNames.edited(source.name, value("name")); c.pool = value("pool"); c.order = integer("order"); atlas.data().categories.put(key, c); atlas.touch();
             }
         });
     }
     private static void poolList(AtlasScreen atlas, Screen parent) {
         open(new FormScreen(parent, "pools") {
-            @Override protected void build() { atlas.data().pools.forEach((id, p) -> actionText(p.name + " [" + id + "]", () -> pool(atlas, this, id))); action("new_pool", () -> pool(atlas, this, null)); }
+            @Override protected void build() { atlas.data().pools.forEach((id, p) -> actionText(DisplayNames.text(p.name), () -> pool(atlas, this, id))); action("new_pool", () -> pool(atlas, this, null)); }
             @Override protected void save() {}
         });
     }
     private static void pool(AtlasScreen atlas, Screen parent, String id) {
         var source = id == null ? new Definition.Pool() : atlas.data().pools.get(id);
         open(new FormScreen(parent, "pool_editor") {
-            @Override protected void build() { if (id == null) text("id", "pool_" + (atlas.data().pools.size() + 1)); else info("id", id); text("name", source.name); text("baseExperience", Long.toString(source.baseExperience)); text("experienceGrowth", Long.toString(source.experienceGrowth)); text("pointsPerLevel", Long.toString(source.pointsPerLevel));
+            @Override protected void build() { if (id == null) text("id", "pool_" + (atlas.data().pools.size() + 1)); else info("id", id); text("name", DisplayNames.text(source.name)); text("baseExperience", Long.toString(source.baseExperience)); text("experienceGrowth", Long.toString(source.experienceGrowth)); text("pointsPerLevel", Long.toString(source.pointsPerLevel));
                 if (id != null) action("delete", () -> { if (atlas.data().categories.values().stream().anyMatch(c -> c.pool.equals(id)) || atlas.data().rules.values().stream().anyMatch(r -> r.pool.equals(id)) || atlas.data().nodes.values().stream().anyMatch(n -> n.levels.stream().anyMatch(l -> l.pool.equals(id)))) { atlas.status(tr("error.pool_in_use"), "error"); return; } atlas.data().pools.remove(id); atlas.touch(); open(parent); });
             }
             @Override protected void save() {
                 String key = id == null ? value("id") : id;
                 if (!AtlasLogic.id(key) || (id == null && atlas.data().pools.containsKey(key))) throw new IllegalArgumentException(label("error.pool"));
-                var p = new Definition.Pool(); p.name = value("name"); p.baseExperience = number("baseExperience"); p.experienceGrowth = number("experienceGrowth"); p.pointsPerLevel = number("pointsPerLevel");
+                var p = new Definition.Pool(); p.name = DisplayNames.edited(source.name, value("name")); p.baseExperience = number("baseExperience"); p.experienceGrowth = number("experienceGrowth"); p.pointsPerLevel = number("pointsPerLevel");
                 if (p.baseExperience < 1 || p.baseExperience > 1_000_000_000L || p.experienceGrowth < 0 || p.experienceGrowth > 1_000_000 || p.pointsPerLevel < 0 || p.pointsPerLevel > 1_000_000) throw new IllegalArgumentException(label("error.pool"));
                 atlas.data().pools.put(key, p); atlas.touch();
             }
@@ -313,7 +317,7 @@ public final class EditorScreens {
     }
     private static void ruleList(AtlasScreen atlas, Screen parent) {
         open(new FormScreen(parent, "rules") {
-            @Override protected void build() { atlas.data().rules.forEach((id, r) -> actionText(id + " / " + r.event + " / " + r.target, () -> rule(atlas, this, id))); action("new_rule", () -> rule(atlas, this, null)); }
+            @Override protected void build() { atlas.data().rules.forEach((id, r) -> actionText(label("value." + r.event) + " · " + registeredName(r.event, r.target) + " · " + DisplayNames.text(atlas.data().pools.get(r.pool).name), () -> rule(atlas, this, id))); action("new_rule", () -> rule(atlas, this, null)); }
             @Override protected void save() {}
         });
     }

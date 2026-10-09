@@ -88,14 +88,14 @@ public final class Definition {
     }
     public static Definition defaults() {
         Definition d = new Definition();
-        Pool p = new Pool(); p.name = "通用 / General"; d.pools.put("general", p);
-        Category c = new Category(); c.name = "战斗 / Combat"; d.categories.put("combat", c);
-        Category m = new Category(); m.name = "挖掘 / Mining"; m.order = 1; d.categories.put("mining", m);
-        Node n = new Node(); n.name = "力量 / Strength"; n.tooltip = "提升攻击力 / Increase attack damage";
+        Pool p = new Pool(); p.name = "通用"; d.pools.put("general", p);
+        Category c = new Category(); c.name = "战斗"; d.categories.put("combat", c);
+        Category m = new Category(); m.name = "挖掘"; m.order = 1; d.categories.put("mining", m);
+        Node n = new Node(); n.name = "力量"; n.tooltip = "提升攻击力";
         n.icon = "minecraft:iron_sword"; n.levels.get(0).rewards.add(new Reward());
         Level l = new Level(); l.cost = 2; Reward r = new Reward(); r.amount = 2; l.rewards.add(r); n.levels.add(l);
         d.nodes.put("strength", n);
-        Node miner = new Node(); miner.name = "矿工 / Miner"; miner.category = "mining"; miner.icon = "minecraft:iron_pickaxe";
+        Node miner = new Node(); miner.name = "矿工"; miner.category = "mining"; miner.icon = "minecraft:iron_pickaxe";
         Reward haste = new Reward(); haste.type = "effect"; haste.target = "minecraft:haste"; miner.levels.get(0).rewards.add(haste);
         d.nodes.put("miner", miner);
         Rule kill = new Rule(); d.rules.put("zombies", kill);

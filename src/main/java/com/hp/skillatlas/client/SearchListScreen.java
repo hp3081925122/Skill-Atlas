@@ -36,7 +36,7 @@ public final class SearchListScreen extends Screen {
             Button old = results.get(i); int index = page * results.size() + i; old.visible = index < filtered.size();
             if (index >= filtered.size()) continue;
             Entry entry = filtered.get(index); removeWidget(old);
-            Button button = Button.builder(Component.literal(entry.label + "  [" + entry.id + "]"), b -> selected.accept(entry.id)).bounds(old.getX(), old.getY(), old.getWidth(), 20).build(UiButton::new);
+            Button button = Button.builder(Component.literal(entry.label), b -> selected.accept(entry.id)).bounds(old.getX(), old.getY(), old.getWidth(), 20).build(UiButton::new);
             addRenderableWidget(button); results.set(i, button);
         }
     }

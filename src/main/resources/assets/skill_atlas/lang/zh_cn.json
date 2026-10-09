@@ -213,5 +213,15 @@
   "skill_atlas.delivery_status": "物品交付状态",
   "skill_atlas.items_ready": "物品已备齐（点击学习时由服务端重新检查）",
   "skill_atlas.items_missing": "缺少所需物品或 NBT 不匹配",
-  "skill_atlas.item_cost_line": "交付：%s"
+  "skill_atlas.item_cost_line": "交付：%s",
+  "skill_atlas.default.combat": "战斗",
+  "skill_atlas.default.mining": "挖掘",
+  "skill_atlas.default.survival": "生存",
+  "skill_atlas.default.general": "通用",
+  "skill_atlas.default.strength": "力量",
+  "skill_atlas.default.miner": "矿工",
+  "skill_atlas.default.strength_tooltip": "提升攻击力",
+  "skill_atlas.unknown_target": "未选择或未知目标",
+  "skill_atlas.tag_target": "标签目标",
+  "skill_atlas.tag_ores": "矿石"
 }

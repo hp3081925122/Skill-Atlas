@@ -213,5 +213,15 @@
   "skill_atlas.delivery_status": "Item delivery status",
   "skill_atlas.items_ready": "Items ready (server rechecks on learning)",
   "skill_atlas.items_missing": "Missing required items or mismatched NBT",
-  "skill_atlas.item_cost_line": "Deliver: %s"
+  "skill_atlas.item_cost_line": "Deliver: %s",
+  "skill_atlas.default.combat": "Combat",
+  "skill_atlas.default.mining": "Mining",
+  "skill_atlas.default.survival": "Survival",
+  "skill_atlas.default.general": "General",
+  "skill_atlas.default.strength": "Strength",
+  "skill_atlas.default.miner": "Miner",
+  "skill_atlas.default.strength_tooltip": "Increase attack damage",
+  "skill_atlas.unknown_target": "Unselected or unknown target",
+  "skill_atlas.tag_target": "Tagged targets",
+  "skill_atlas.tag_ores": "Ores"
 }
