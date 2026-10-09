@@ -2,13 +2,15 @@
 
 界面面板、侧栏、工具栏、分类、按钮各状态、单行/多行输入框底板、搜索结果、节点状态、连线、框选、滚动条和节点悬浮提示均从资源纹理绘制。文字、物品图标和原生输入的光标/文本选区继续使用 Minecraft 的字体和输入机制。
 
-默认素材为 Kenney 的 **UI Pack - Pixel Adventure**，许可证为 **CC0 1.0**。官方来源：https://kenney.nl/assets/ui-pack-pixel-adventure 。模组内保留了素材包原始许可证 `META-INF/LICENSE-Kenney-UI.txt`、NOTICE，以及 `assets/skill_atlas/ui/sources.json` 中的逐文件来源。选用的 16 张 PNG 未修改，裁切区域、透明度和九宫格缩放在渲染时处理。本模组不商用；素材许可本身也允许随项目分发。
+当前默认外观已回退到 `new_theme.json` 对应的深色蓝灰主题，使用原有的 30 张 PNG，位于 `assets/skill_atlas/textures/gui/new_theme/`。主题配置与贴图保持截图版本原样，技能功能和名称显示修正保留。
+
+早期 Kenney 的 UI Pack - Pixel Adventure 素材仍保留在 `textures/gui/kenney/`，其 CC0 1.0 许可证、NOTICE 和逐文件来源信息也继续保留；这些素材不是当前默认外观。
 
 ## 更换主题
 
 1. 安装随附的“Skill Atlas UI 资源包模板.zip”，放进客户端 `resourcepacks` 并启用；服务器不需要安装这个资源包。
-2. 修改 `assets/skill_atlas/ui/theme.json`，或直接替换 `assets/skill_atlas/textures/gui/kenney/` 下的对应 PNG。替换 PNG 后保留尺寸；尺寸变化时同步修改 theme.json。
-3. 游戏中使用 F3+T 重载资源，已打开的技能树、编辑表单与搜索页使用新主题。无需重新编译 JAR。
+2. 修改 `assets/skill_atlas/ui/theme.json`，或直接替换 `assets/skill_atlas/textures/gui/new_theme/` 下的对应 PNG。替换 PNG 后保留尺寸；尺寸变化时同步修改 theme.json。
+3. 如果启用了早期 UI 资源包，它的 theme.json 会覆盖模组默认主题；请停用旧包或换成本次更新的模板。游戏中使用 F3+T 重载资源，已打开的技能树、编辑表单与搜索页使用新主题。无需重新编译 JAR。
 
 模组的完整默认定义位于 `assets/skill_atlas/ui/default_theme.json`。实际换肤入口为 `theme.json`：允许只写需要修改的字段，其他字段继承模组内置默认值。资源包中直接覆盖 default_theme.json 不是换肤入口。
 
