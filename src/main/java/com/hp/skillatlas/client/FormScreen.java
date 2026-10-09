@@ -56,6 +56,13 @@ public abstract class FormScreen extends Screen {
         button.active = false; row(key, button, 20);
     }
     protected void pick(String key, String initial, List<SearchListScreen.Entry> entries) {
+        if (!key.equals("icon")) {
+            values.putIfAbsent(key, initial);
+            String name = entries.stream().filter(e -> e.id().equals(value(key))).map(SearchListScreen.Entry::label).findFirst().orElse(tr("unknown_target").getString());
+            row(key, Button.builder(Component.literal(name), b -> minecraft.setScreen(new SearchListScreen(this, "choose_" + key, entries, id -> { values.put(key, id); minecraft.setScreen(this); })))
+                .bounds(Math.max(15, width / 2 - 210), 0, Math.min(420, width - 30), 20).build(UiButton::new), 20);
+            return;
+        }
         text(key, initial);
         action("choose_" + key, () -> minecraft.setScreen(new SearchListScreen(this, "choose_" + key, entries, id -> { values.put(key, id); minecraft.setScreen(this); })));
     }

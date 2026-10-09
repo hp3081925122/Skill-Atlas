@@ -93,7 +93,7 @@ public final class AtlasScreen extends Screen {
     }
     private List<String> results() {
         if (query.isBlank()) return List.of();
-        if (searchIndex.isEmpty()) data().nodes.forEach((id, n) -> searchIndex.put(id, TextSearch.index(n.name + " " + n.tooltip + " " + n.aliases)));
+        if (searchIndex.isEmpty()) data().nodes.forEach((id, n) -> searchIndex.put(id, TextSearch.index(DisplayNames.searchText(n.name) + " " + DisplayNames.searchText(n.tooltip) + " " + n.aliases)));
         return data().nodes.entrySet().stream().filter(e -> AtlasLogic.visible(e.getValue(), ClientState.progress, editing) && TextSearch.matches(searchIndex.get(e.getKey()), query)).map(Map.Entry::getKey).toList();
     }
     @Override public void render(GuiGraphics g, int mx, int my, float partial) {
@@ -107,7 +107,7 @@ public final class AtlasScreen extends Screen {
         for (int i = 0; i < slots && i + categoryScroll < categories.size(); i++) {
             String id = categories.get(i + categoryScroll); int y = top + 7 + i * 24;
             UiTheme.draw(g, id.equals(category) ? "category_selected" : "category", 4, y - 3, left - 8, 20);
-            g.drawString(font, font.plainSubstrByWidth(data().categories.get(id).name, left - 14), 8, y + 2, UiTheme.color(id.equals(category) ? "category_selected" : "category"));
+            g.drawString(font, font.plainSubstrByWidth(DisplayNames.text(data().categories.get(id).name), left - 14), 8, y + 2, UiTheme.color(id.equals(category) ? "category_selected" : "category"));
         }
         if (data().categories.containsKey(category)) {
             String poolId = data().categories.get(category).pool; var pool = data().pools.get(poolId); var balance = ClientState.progress.pools.getOrDefault(poolId, new PlayerProgress.Balance());
@@ -138,7 +138,7 @@ public final class AtlasScreen extends Screen {
             UiTheme.draw(g, texture, -16, -16, 32, 32);
             renderIcon(g, e.getKey(), n);
             g.drawCenteredString(font, level + "/" + n.levels.size(), 0, 18, UiTheme.color("text")); g.pose().popPose();
-            if (view().scale >= 0.7) g.drawCenteredString(font, font.plainSubstrByWidth(n.name, 140), (int)x, (int)(y - size - 13), UiTheme.color("text"));
+            if (view().scale >= 0.7) g.drawCenteredString(font, font.plainSubstrByWidth(DisplayNames.text(n.name), 140), (int)x, (int)(y - size - 13), UiTheme.color("text"));
         }
         if (boxing) {
             int x1 = (int)Math.min(startX, mx), x2 = (int)Math.max(startX, mx), y1 = (int)Math.min(startY, my), y2 = (int)Math.max(startY, my);
@@ -146,7 +146,7 @@ public final class AtlasScreen extends Screen {
         }
         List<String> results = results();
         int resultSlots = Math.max(1, (height - top - 29) / 23); searchOffset = Math.max(0, Math.min(searchOffset, Math.max(0, results.size() - resultSlots)));
-        for (int i = 0; i < resultSlots && i + searchOffset < results.size(); i++) { int y = top + i * 23; UiTheme.draw(g, mx >= left + 5 && mx < width - 5 && my >= y && my < y + 22 ? "result_hover" : "result", left + 5, y, width - left - 10, 22); var n = data().nodes.get(results.get(i + searchOffset)); g.drawString(font, font.plainSubstrByWidth(n.name + "  [" + data().categories.get(n.category).name + "]", width - left - 20), left + 10, y + 7, UiTheme.color("text")); }
+        for (int i = 0; i < resultSlots && i + searchOffset < results.size(); i++) { int y = top + i * 23; UiTheme.draw(g, mx >= left + 5 && mx < width - 5 && my >= y && my < y + 22 ? "result_hover" : "result", left + 5, y, width - left - 10, 22); var n = data().nodes.get(results.get(i + searchOffset)); g.drawString(font, font.plainSubstrByWidth(DisplayNames.text(n.name) + " · " + DisplayNames.text(data().categories.get(n.category).name), width - left - 20), left + 10, y + 7, UiTheme.color("text")); }
         g.disableScissor();
         if (editing) g.drawString(font, Component.translatable("skill_atlas.selection", selected.size()), left + 5, 58, UiTheme.color("label"));
         g.drawString(font, font.plainSubstrByWidth(status.getString().isBlank() ? FormScreen.tr(editing ? "editor_help" : "viewer_help").getString() : status.getString(), width - 12), 6, height - 20, UiTheme.color("muted"));
@@ -166,9 +166,9 @@ public final class AtlasScreen extends Screen {
         }); g.renderItem(stack, -8, -8);
     }
     private void tooltip(GuiGraphics g, String id, int x, int y) {
-        var n = data().nodes.get(id); List<Component> lines = new ArrayList<>(); lines.add(Component.literal(n.name));
+        var n = data().nodes.get(id); List<Component> lines = new ArrayList<>(); lines.add(Component.literal(DisplayNames.text(n.name)));
         lines.add(Component.translatable("skill_atlas.node_level", ClientState.progress.level(id), n.levels.size()));
-        for (String line : n.tooltip.split("\\n")) lines.add(Component.literal(line));
+        for (String line : DisplayNames.text(n.tooltip).split("\\n")) lines.add(Component.literal(line));
         int level = ClientState.progress.level(id);
         if (level > 0) for (var reward : n.levels.get(level - 1).rewards) lines.add(Component.literal(EditorScreens.rewardDescription(reward)));
         if (level < n.levels.size()) {
@@ -176,7 +176,7 @@ public final class AtlasScreen extends Screen {
             for (var item : n.levels.get(level).items) lines.add(Component.translatable("skill_atlas.item_cost_line", EditorScreens.itemDescription(item)));
             for (var reward : n.levels.get(level).rewards) lines.add(Component.translatable("skill_atlas.next_reward_line", EditorScreens.rewardDescription(reward)));
         }
-        for (var r : n.prerequisites) { var parent = data().nodes.get(r.node); if (parent != null) lines.add(Component.translatable("skill_atlas.prerequisite_entry", AtlasLogic.visible(parent, ClientState.progress, editing) ? parent.name : FormScreen.tr("hidden_skill").getString(), r.level, ClientState.progress.level(r.node) >= r.level ? "✓" : "×")); }
+        for (var r : n.prerequisites) { var parent = data().nodes.get(r.node); if (parent != null) lines.add(Component.translatable("skill_atlas.prerequisite_entry", AtlasLogic.visible(parent, ClientState.progress, editing) ? DisplayNames.text(parent.name) : FormScreen.tr("hidden_skill").getString(), r.level, ClientState.progress.level(r.node) >= r.level ? "✓" : "×")); }
         UiTheme.tooltip(g, lines, x, y, width, height);
     }
     private void drawLine(GuiGraphics g, double x1, double y1, double x2, double y2, boolean learned) {
