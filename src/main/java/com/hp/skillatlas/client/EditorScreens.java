@@ -37,6 +37,18 @@ public final class EditorScreens {
     private static List<SearchListScreen.Entry> nodes(Definition d) { return d.nodes.entrySet().stream().map(e -> new SearchListScreen.Entry(e.getKey(), e.getValue().name + " / " + d.categories.get(e.getValue().category).name)).toList(); }
     private static List<SearchListScreen.Entry> categories(Definition d) { return d.categories.entrySet().stream().map(e -> new SearchListScreen.Entry(e.getKey(), e.getValue().name)).toList(); }
     private static List<SearchListScreen.Entry> pools(Definition d) { return d.pools.entrySet().stream().map(e -> new SearchListScreen.Entry(e.getKey(), e.getValue().name)).toList(); }
+    private static List<SearchListScreen.Entry> costPools(Definition d) {
+        List<SearchListScreen.Entry> result = new ArrayList<>(); result.add(new SearchListScreen.Entry("", label("inherit_pool"))); result.addAll(pools(d)); return result;
+    }
+    public static String costDescription(Definition d, Definition.Node n, int index) {
+        String pool = AtlasLogic.pointPool(d, n, index); var definition = d.pools.get(pool);
+        return n.levels.get(index).cost + " " + (definition == null ? pool : definition.name) + " [" + pool + "]";
+    }
+    public static String itemDescription(Definition.ItemCost item) {
+        var id = ResourceLocation.tryParse(item.item); var value = id == null ? null : ForgeRegistries.ITEMS.getValue(id);
+        String name = value == null ? item.item : Component.translatable(value.getDescriptionId()).getString();
+        return name + " × " + item.count + (item.nbt.isBlank() ? "" : " " + item.nbt);
+    }
     public static void detail(AtlasScreen atlas, String id) {
         open(new FormScreen(atlas, "details") {
             @Override protected void build() {
@@ -46,7 +58,11 @@ public final class EditorScreens {
                 for (String line : n.tooltip.split("\\n")) info("tooltip", line);
                 if (current > 0) for (var r : n.levels.get(current - 1).rewards) info("current_rewards", rewardDescription(r));
                 if (current < n.levels.size()) {
-                    var next = n.levels.get(current); info("cost", Long.toString(next.cost));
+                    var next = n.levels.get(current); info("cost", costDescription(ClientState.definition, n, current));
+                    String pool = AtlasLogic.pointPool(ClientState.definition, n, current);
+                    info("available_points", Long.toString(ClientState.progress.pools.getOrDefault(pool, new PlayerProgress.Balance()).points));
+                    for (var item : next.items) info("item_costs", itemDescription(item));
+                    if (!next.items.isEmpty()) info("delivery_status", label(minecraft.player != null && ItemDelivery.available(minecraft.player.getInventory(), next.items) ? "items_ready" : "items_missing"));
                     for (var r : next.rewards) info("next_rewards", rewardDescription(r));
                     action("learn", () -> {
                         JsonObject request = new JsonObject(); request.addProperty("node", id); request.addProperty("level", current); request.addProperty("revision", ClientState.definition.revision);
@@ -121,9 +137,52 @@ public final class EditorScreens {
                 info("level", Integer.toString(index + 1)); if (ids.size() > 1) choice("apply_cost", "false", "false", "true");
                 text("cost", Long.toString(atlas.data().nodes.get(ids.get(0)).levels.get(index).cost));
                 if (ids.stream().anyMatch(id -> atlas.data().nodes.get(id).levels.get(index).cost != atlas.data().nodes.get(ids.get(0)).levels.get(index).cost)) info("mixed", label("multiple_values"));
+                if (ids.size() > 1) choice("apply_cost_pool", "false", "false", "true");
+                String pool = atlas.data().nodes.get(ids.get(0)).levels.get(index).pool; pick("cost_pool", pool, costPools(atlas.data()));
+                info("pool_hint", label("pool_hint_text"));
+                if (ids.stream().anyMatch(id -> !atlas.data().nodes.get(id).levels.get(index).pool.equals(pool))) info("mixed", label("multiple_values"));
+                action("item_costs", () -> itemCosts(atlas, this, ids, index));
                 action("rewards", () -> rewards(atlas, this, ids, index));
             }
-            @Override protected void save() { if (ids.size() == 1 || bool("apply_cost")) { long cost = number("cost"); if (cost < 0 || cost > AtlasLogic.LIMIT) throw new IllegalArgumentException(label("error.cost")); ids.forEach(id -> atlas.data().nodes.get(id).levels.get(index).cost = cost); atlas.touch(); } }
+            @Override protected void save() {
+                boolean setCost = ids.size() == 1 || bool("apply_cost"), setPool = ids.size() == 1 || bool("apply_cost_pool");
+                long cost = setCost ? number("cost") : 0; String pool = value("cost_pool").trim();
+                if (setCost && (cost < 0 || cost > AtlasLogic.LIMIT)) throw new IllegalArgumentException(label("error.cost"));
+                if (setPool && !pool.isEmpty() && !atlas.data().pools.containsKey(pool)) throw new IllegalArgumentException(label("error.pool"));
+                for (String id : ids) { var level = atlas.data().nodes.get(id).levels.get(index); if (setCost) level.cost = cost; if (setPool) level.pool = pool; }
+                if (setCost || setPool) atlas.touch();
+            }
+        });
+    }
+    private static void itemCosts(AtlasScreen atlas, Screen parent, List<String> ids, int index) {
+        List<Definition.ItemCost> items = new ArrayList<>(); atlas.data().nodes.get(ids.get(0)).levels.get(index).items.forEach(r -> items.add(copy(r, Definition.ItemCost.class)));
+        open(new FormScreen(parent, "item_costs") {
+            @Override protected void build() {
+                info("delivery_help", label("delivery_help_text"));
+                if (ids.size() > 1) {
+                    choice("apply_items", "false", "false", "true"); info("batch_replace", label("batch_replace_items"));
+                    if (ids.stream().anyMatch(id -> !Definition.JSON.toJson(items).equals(Definition.JSON.toJson(atlas.data().nodes.get(id).levels.get(index).items)))) info("mixed", label("multiple_values"));
+                }
+                for (int i = 0; i < items.size(); i++) { int at = i; actionText((i + 1) + ". " + itemDescription(items.get(at)), () -> itemCost(this, items.get(at), r -> { items.set(at, r); open(this); }, () -> { items.remove(at); open(this); })); }
+                action("new_item_cost", () -> itemCost(this, new Definition.ItemCost(), r -> { items.add(r); open(this); }, () -> open(this)));
+            }
+            @Override protected void save() {
+                if (ids.size() > 1 && !bool("apply_items")) return;
+                if (items.size() > 128) throw new IllegalArgumentException(label("error.item_cost"));
+                for (String id : ids) { var target = atlas.data().nodes.get(id).levels.get(index).items; target.clear(); items.forEach(r -> target.add(copy(r, Definition.ItemCost.class))); } atlas.touch();
+            }
+        });
+    }
+    private static void itemCost(Screen parent, Definition.ItemCost source, Consumer<Definition.ItemCost> saved, Runnable deleted) {
+        open(new FormScreen(parent, "item_cost_editor") {
+            @Override protected void build() {
+                pick("delivery_item", source.item, registry("item")); text("delivery_count", Integer.toString(source.count)); text("delivery_nbt", source.nbt, true);
+                info("nbt_hint", label("delivery_nbt_hint")); action("delete", deleted);
+            }
+            @Override protected void save() {
+                var item = new Definition.ItemCost(); item.item = value("delivery_item").trim(); item.count = integer("delivery_count"); item.nbt = value("delivery_nbt").trim();
+                if (ItemDelivery.validate(item) != null) throw new IllegalArgumentException(label("error.item_cost")); saved.accept(item);
+            }
         });
     }
     private static void rewards(AtlasScreen atlas, Screen parent, List<String> ids, int index) {
@@ -241,7 +300,7 @@ public final class EditorScreens {
         var source = id == null ? new Definition.Pool() : atlas.data().pools.get(id);
         open(new FormScreen(parent, "pool_editor") {
             @Override protected void build() { if (id == null) text("id", "pool_" + (atlas.data().pools.size() + 1)); else info("id", id); text("name", source.name); text("baseExperience", Long.toString(source.baseExperience)); text("experienceGrowth", Long.toString(source.experienceGrowth)); text("pointsPerLevel", Long.toString(source.pointsPerLevel));
-                if (id != null) action("delete", () -> { if (atlas.data().categories.values().stream().anyMatch(c -> c.pool.equals(id)) || atlas.data().rules.values().stream().anyMatch(r -> r.pool.equals(id))) { atlas.status(tr("error.pool_in_use"), "error"); return; } atlas.data().pools.remove(id); atlas.touch(); open(parent); });
+                if (id != null) action("delete", () -> { if (atlas.data().categories.values().stream().anyMatch(c -> c.pool.equals(id)) || atlas.data().rules.values().stream().anyMatch(r -> r.pool.equals(id)) || atlas.data().nodes.values().stream().anyMatch(n -> n.levels.stream().anyMatch(l -> l.pool.equals(id)))) { atlas.status(tr("error.pool_in_use"), "error"); return; } atlas.data().pools.remove(id); atlas.touch(); open(parent); });
             }
             @Override protected void save() {
                 String key = id == null ? value("id") : id;

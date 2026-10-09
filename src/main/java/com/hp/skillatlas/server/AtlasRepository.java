@@ -73,10 +73,13 @@ public final class AtlasRepository {
             ResourceLocation icon = ResourceLocation.tryParse(n.icon);
             if (icon == null || ("item".equals(n.iconType) && !ForgeRegistries.ITEMS.containsKey(icon))) errors.add("Unknown icon: " + id + " / " + n.icon);
             if (!n.iconNbt.isBlank()) try { TagParser.parseTag(n.iconNbt); } catch (Exception ex) { errors.add("Invalid item NBT: " + id); }
-            for (var level : n.levels) for (var reward : level.rewards) {
-                var type = RewardTypes.get(reward.type);
-                if (type == null) errors.add("Unknown reward type: " + id + " / " + reward.type);
-                else type.validate(reward).forEach(error -> errors.add(id + ": " + error));
+            for (var level : n.levels) {
+                for (var item : level.items) { String error = ItemDelivery.validate(item); if (error != null) errors.add(id + ": " + error); }
+                for (var reward : level.rewards) {
+                    var type = RewardTypes.get(reward.type);
+                    if (type == null) errors.add("Unknown reward type: " + id + " / " + reward.type);
+                    else type.validate(reward).forEach(error -> errors.add(id + ": " + error));
+                }
             }
         });
         d.rules.forEach((id, r) -> {

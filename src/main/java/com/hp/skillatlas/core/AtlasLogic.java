@@ -3,6 +3,7 @@ package com.hp.skillatlas.core;
 import com.hp.skillatlas.model.*;
 import java.util.*;
 import java.math.BigInteger;
+import java.util.function.Predicate;
 
 public final class AtlasLogic {
     public static final long LIMIT = 1_000_000_000_000L;
@@ -17,19 +18,27 @@ public final class AtlasLogic {
         return editor || !n.hideUntilReady || ready(n, p);
     }
     public static String learn(Definition d, PlayerProgress p, String id, int expectedLevel) {
-        synchronized (p) { return purchase(d, p, id, expectedLevel); }
+        return learn(d, p, id, expectedLevel, List::isEmpty);
     }
-    private static String purchase(Definition d, PlayerProgress p, String id, int expectedLevel) {
+    public static String learn(Definition d, PlayerProgress p, String id, int expectedLevel, Predicate<List<Definition.ItemCost>> deliver) {
+        synchronized (p) { return purchase(d, p, id, expectedLevel, deliver); }
+    }
+    public static String pointPool(Definition d, Definition.Node n, int index) {
+        String pool = n.levels.get(index).pool;
+        return pool.isEmpty() ? d.categories.get(n.category).pool : pool;
+    }
+    private static String purchase(Definition d, PlayerProgress p, String id, int expectedLevel, Predicate<List<Definition.ItemCost>> deliver) {
         Definition.Node n = d.nodes.get(id);
         if (n == null) return "unknown_node";
         int current = p.level(id);
         if (current != expectedLevel) return "stale";
         if (current >= n.levels.size()) return "max_level";
         if (!ready(n, p)) return "prerequisite";
-        String pool = d.categories.get(n.category).pool;
+        String pool = pointPool(d, n, current);
         long cost = n.levels.get(current).cost;
         PlayerProgress.Balance b = p.balance(pool);
         if (b.points < cost) return "insufficient";
+        if (!deliver.test(n.levels.get(current).items)) return "insufficient_items";
         b.points -= cost;
         PlayerProgress.Learned s = p.learned.computeIfAbsent(id, k -> new PlayerProgress.Learned());
         s.payments.add(new PlayerProgress.Payment(pool, cost)); s.level++;
@@ -135,7 +144,10 @@ public final class AtlasLogic {
                 if (parent == null || parent.levels == null || r.level < 1 || r.level > parent.levels.size()) e.add("Invalid prerequisite: " + id);
             }
             for (var l : n.levels) {
-                if (l == null || l.cost < 0 || l.cost > LIMIT || l.rewards == null || l.rewards.size() > 128) { e.add("Invalid level: " + id); continue; }
+                if (l == null || l.pool == null || (!l.pool.isEmpty() && !d.pools.containsKey(l.pool)) || l.cost < 0 || l.cost > LIMIT
+                    || l.items == null || l.items.size() > 128 || l.rewards == null || l.rewards.size() > 128) { e.add("Invalid level: " + id); continue; }
+                for (var item : l.items) if (item == null || !id(item.item) || item.count < 1 || item.count > 1_000_000 || item.nbt == null || item.nbt.length() > 8192)
+                    e.add("Invalid item cost: " + id);
                 for (var r : l.rewards) {
                     if (r == null || !id(r.type) || r.target == null || !Double.isFinite(r.amount) || Math.abs(r.amount) > 1e9
                         || !Set.of("addition", "multiply_base", "multiply_total").contains(r.operation) || r.interval < 1 || r.interval > 72000 || r.duration < 1 || r.duration > 72000

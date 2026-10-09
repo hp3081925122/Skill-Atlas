@@ -91,8 +91,8 @@ public final class AtlasService {
             if ("open".equals(op)) { snapshot(p, true); return; }
             if ("learn".equals(op)) {
                 if (o.get("revision").getAsLong() != definition().revision) { status(p, "stale", ""); snapshot(p, false); return; }
-                String result = AtlasLogic.learn(definition(), progress(p), o.get("node").getAsString(), o.get("level").getAsInt());
-                if (result.equals("ok")) { changed(p); rewards.rebuild(p, definition(), progress(p)); syncProgress(p); }
+                String result = AtlasLogic.learn(definition(), progress(p), o.get("node").getAsString(), o.get("level").getAsInt(), items -> ItemDelivery.consume(p.getInventory(), items));
+                if (result.equals("ok")) { changed(p); p.containerMenu.broadcastChanges(); p.inventoryMenu.broadcastChanges(); rewards.rebuild(p, definition(), progress(p)); syncProgress(p); }
                 status(p, result, ""); return;
             }
             if (!p.hasPermissions(2)) { status(p, "permission", ""); return; }
