@@ -170,10 +170,10 @@ public final class PointTracker {
             gain = Math.min(gain, rule.limit - awarded);
         }
         AtlasServer.data().setDirty();
+        AtlasServer.markSync(player);
         if (gain <= 0) {
             return;
         }
-        AtlasServer.markSync(player);
         p.addPoints(rule.pool, gain);
         p.addAwarded(rule.id, gain);
         if (AtlasConfig.NOTIFY_POINTS.get()) {

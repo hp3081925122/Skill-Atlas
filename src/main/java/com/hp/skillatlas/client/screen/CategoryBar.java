@@ -15,16 +15,16 @@ import com.hp.skillatlas.client.ui.Ui;
 import com.hp.skillatlas.client.ui.Widget;
 import com.hp.skillatlas.data.Category;
 import com.hp.skillatlas.data.EditOps;
-import com.hp.skillatlas.data.PointPool;
+import com.hp.skillatlas.data.PointRule;
 import com.hp.skillatlas.data.SkillNode;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public final class CategoryBar extends Group {
     private static final float TAB = 22;
-    private static final float POOL_ROW = 11;
     private final MainLayer main;
     private final Button create;
     private float scroll;
@@ -39,33 +39,8 @@ public final class CategoryBar extends Group {
         return new ArrayList<>(ClientAtlas.definition.categories.values());
     }
 
-    private List<PointPool> pools() {
-        List<PointPool> out = new ArrayList<>();
-        for (PointPool p : ClientAtlas.definition.pools.values()) {
-            boolean used = false;
-            for (Category c : ClientAtlas.definition.categories.values()) {
-                if (c.pool.equals(p.id)) {
-                    used = true;
-                    break;
-                }
-            }
-            if (used || ClientAtlas.editMode) {
-                out.add(p);
-            }
-        }
-        return out;
-    }
-
-    private float poolsHeight() {
-        int n = Math.min(6, pools().size());
-        if (n == 0) {
-            return 0;
-        }
-        return n * POOL_ROW + 8;
-    }
-
     private float tabsBottom() {
-        float b = y + h - poolsHeight();
+        float b = y + h;
         if (ClientAtlas.editMode) {
             b -= 20;
         }
@@ -138,20 +113,6 @@ public final class CategoryBar extends Group {
         create.bounds(x, bottom + 2, w, 16);
         if (create.visible) {
             create.render(pt);
-        }
-        List<PointPool> pools = pools();
-        if (!pools.isEmpty()) {
-            float py = y + h - poolsHeight() + 4;
-            Gfx.fill(x + 2, py - 3, w - 4, 1, Theme.SEPARATOR);
-            for (int i = 0; i < Math.min(6, pools.size()); i++) {
-                PointPool p = pools.get(i);
-                Gfx.sprite(Sprites.GEM, x + 3, py + 1, 9, 9, 0xFF000000 | p.color);
-                String amount = String.valueOf(ClientAtlas.progress.points(p.id));
-                float aw = Gfx.width(amount);
-                Gfx.text(Gfx.ellipsize(Names.pool(p), w - aw - 22).getVisualOrderText(), x + 15, py + 2, Theme.TEXT, true);
-                Gfx.text(amount, x + w - aw - 2, py + 2, Theme.GOLD);
-                py += POOL_ROW;
-            }
         }
     }
 
@@ -256,6 +217,38 @@ public final class CategoryBar extends Group {
         }
         out.add(Component.translatable("skill_atlas.ui.category_progress", learned, count).withStyle(s -> s.withColor(0x8A93A8)));
         out.add(Component.translatable("skill_atlas.ui.category_pool", Names.pool(c.pool)).withStyle(s -> s.withColor(0x8A93A8)));
+        out.add(Component.empty());
+        out.add(Component.translatable("skill_atlas.ui.category_rules").withStyle(s -> s.withColor(0xE8C26A)));
+        boolean any = false;
+        for (PointRule r : ClientAtlas.definition.rules.values()) {
+            if (!r.pool.equals(c.pool)) {
+                continue;
+            }
+            any = true;
+            long awarded = ClientAtlas.progress.awarded(r.id);
+            MutableComponent state;
+            if (r.limit > 0 && awarded >= r.limit) {
+                state = Component.translatable("skill_atlas.ui.points.rule_done").withStyle(s -> s.withColor(0xE0685A));
+            } else {
+                state = Component.translatable("skill_atlas.ui.category_rule_progress", ClientAtlas.progress.counter(r.id), r.count, r.points).withStyle(s -> s.withColor(0x7FD8C8));
+                if (r.limit > 0) {
+                    state = state.append(Component.literal("  ")).append(Component.translatable("skill_atlas.ui.points.rule_limit", awarded, r.limit).withStyle(s -> s.withColor(0x8A93A8)));
+                }
+            }
+            out.add(Names.rule(r).withStyle(s -> s.withColor(0xE6E9F2)).append(Component.literal("  ")).append(state));
+            List<Component> desc = Names.tooltipLines(r.description);
+            if (desc.isEmpty() && !r.name.isEmpty()) {
+                PointRule auto = r.copy();
+                auto.name = "";
+                desc.add(Component.translatable("skill_atlas.ui.rule.preview", Names.rule(auto), r.points, Names.pool(r.pool)).withStyle(s -> s.withColor(0xB8BED0)));
+            }
+            for (Component line : desc) {
+                out.add(Component.literal("  ").append(line));
+            }
+        }
+        if (!any) {
+            out.add(Component.translatable("skill_atlas.ui.category_no_rules").withStyle(s -> s.withColor(0x8A93A8)));
+        }
         if (ClientAtlas.editMode) {
             out.add(Component.translatable("skill_atlas.ui.category_hint").withStyle(s -> s.withColor(0x5A6478)));
         }

@@ -105,6 +105,9 @@ public final class PointsDialog extends Dialog {
             } else {
                 f.full(name, 12);
             }
+            for (Component line : Names.tooltipLines(rule.description)) {
+                NodeEditorDialog.hint(f, line, Theme.TEXT);
+            }
             f.full(new Label(() -> progressLine(id), Theme.MUTED), 10);
             f.gap(5);
         }
