@@ -20,7 +20,7 @@ public final class AtlasConfig {
                 .comment("编辑技能树所需的权限等级 / Permission level required to edit the skill atlas")
                 .defineInRange("editPermissionLevel", 2, 0, 4);
         COUNT_CREATIVE = server
-                .comment("创造与旁观模式下是否累计技能点获取进度 / Whether creative and spectator players progress point rules")
+                .comment("创造与旁观模式下是否累计技能点获取进度 / Whether creative and spectator players make progress toward earning points")
                 .define("countCreativePlayers", false);
         NOTIFY_POINTS = server
                 .comment("获得技能点时是否在动作栏提示 / Show an action bar message when skill points are gained")

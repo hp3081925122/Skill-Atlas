@@ -132,7 +132,7 @@ public final class AtlasServer {
             definition = next;
             loadFailed = false;
             loadError = "";
-            SkillAtlas.LOGGER.info("Loaded skill atlas with {} nodes, {} categories, {} rules", next.nodes.size(), next.categories.size(), next.rules.size());
+            SkillAtlas.LOGGER.info("Loaded skill atlas with {} nodes, {} categories, {} point pools", next.nodes.size(), next.categories.size(), next.pools.size());
         } catch (AtlasException e) {
             fail(path, e.getMessage());
         } catch (IOException | RuntimeException e) {

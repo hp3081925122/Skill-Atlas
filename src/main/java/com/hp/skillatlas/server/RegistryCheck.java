@@ -7,7 +7,7 @@ import com.hp.skillatlas.data.Category;
 import com.hp.skillatlas.data.EditOps;
 import com.hp.skillatlas.data.Icon;
 import com.hp.skillatlas.data.ItemCost;
-import com.hp.skillatlas.data.PointRule;
+import com.hp.skillatlas.data.PointPool;
 import com.hp.skillatlas.data.Reward;
 import com.hp.skillatlas.data.RewardType;
 import com.hp.skillatlas.data.SkillLevel;
@@ -54,17 +54,17 @@ public final class RegistryCheck {
             }
         }
         MinecraftServer server = editor.getServer();
-        for (String id : changes.rules) {
-            PointRule r = after.rules.get(id);
-            if (r == null) {
+        for (String id : changes.pools) {
+            PointPool p = after.pools.get(id);
+            if (p == null) {
                 continue;
             }
-            for (String t : r.targets) {
+            for (String t : p.targets) {
                 if (t.startsWith("#")) {
                     continue;
                 }
                 ResourceLocation rl = new ResourceLocation(t);
-                boolean known = switch (r.type.targets) {
+                boolean known = switch (p.method.targets) {
                     case ENTITY -> ForgeRegistries.ENTITY_TYPES.containsKey(rl);
                     case BLOCK -> ForgeRegistries.BLOCKS.containsKey(rl);
                     case ITEM -> ForgeRegistries.ITEMS.containsKey(rl);

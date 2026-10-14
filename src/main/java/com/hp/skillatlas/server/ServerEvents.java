@@ -134,7 +134,7 @@ public final class ServerEvents {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onDeath(LivingDeathEvent event) {
         if (!event.isCanceled() && event.getSource().getEntity() instanceof ServerPlayer player && player != event.getEntity()) {
-            PointTracker.kill(player, event.getEntity().getType());
+            PointTracker.kill(player, event.getEntity());
         }
     }
 

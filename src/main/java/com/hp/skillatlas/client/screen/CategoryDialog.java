@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.hp.skillatlas.client.ClientAtlas;
 import com.hp.skillatlas.client.Names;
 import com.hp.skillatlas.client.ui.Button;
+import com.hp.skillatlas.client.ui.Checkbox;
 import com.hp.skillatlas.client.ui.CycleButton;
 import com.hp.skillatlas.client.ui.Dialog;
 import com.hp.skillatlas.client.ui.Form;
@@ -30,7 +31,7 @@ public final class CategoryDialog extends Dialog {
     private Button save;
 
     public CategoryDialog(MainLayer main, Category existing) {
-        super(title(existing), 320, 200);
+        super(title(existing), 340, 260);
         this.main = main;
         this.create = existing == null;
         if (existing == null) {
@@ -88,6 +89,13 @@ public final class CategoryDialog extends Dialog {
             f.row(Component.translatable("skill_atlas.ui.field.pool"), pool);
         }
         NodeEditorDialog.hint(f, Component.translatable("skill_atlas.ui.category.hint"), Theme.DIM);
+        TextInput background = new TextInput(c.background).max(256).placeholder(Component.translatable("skill_atlas.ui.category.background.placeholder"));
+        background.valid = s -> s.isBlank() || Json.validResource(Json.normalizeResource(s));
+        background.onChange = s -> c.background = s.trim();
+        inputs.add(f.row(Component.translatable("skill_atlas.ui.field.background"), background));
+        Checkbox tile = new Checkbox(Component.translatable("skill_atlas.ui.field.tile"), c.tile, v -> c.tile = v);
+        f.row(Component.empty(), tile);
+        NodeEditorDialog.hint(f, Component.translatable("skill_atlas.ui.category.background.hint"), Theme.DIM);
         f.finish();
         Button cancel = new Button(Component.translatable("skill_atlas.ui.cancel"), this::close);
         save = new Button(Component.translatable("skill_atlas.ui.save"), this::save).style(Button.Style.PRIMARY);

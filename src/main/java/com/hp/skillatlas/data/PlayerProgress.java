@@ -63,24 +63,24 @@ public final class PlayerProgress {
         setPoints(pool, points(pool) + delta);
     }
 
-    public long counter(String rule) {
-        return counters.getOrDefault(rule, 0L);
+    public long counter(String pool) {
+        return counters.getOrDefault(pool, 0L);
     }
 
-    public void setCounter(String rule, long value) {
+    public void setCounter(String pool, long value) {
         if (value <= 0L) {
-            counters.remove(rule);
+            counters.remove(pool);
         } else {
-            counters.put(rule, value);
+            counters.put(pool, value);
         }
     }
 
-    public long awarded(String rule) {
-        return awarded.getOrDefault(rule, 0L);
+    public long awarded(String pool) {
+        return awarded.getOrDefault(pool, 0L);
     }
 
-    public void addAwarded(String rule, long value) {
-        awarded.merge(rule, value, Long::sum);
+    public void addAwarded(String pool, long value) {
+        awarded.merge(pool, value, Long::sum);
     }
 
     public List<Payment> payments(String node) {

@@ -20,18 +20,15 @@ public final class AtlasDefinition {
     public static final int MAX_NODES = 10_000;
     public static final int MAX_CATEGORIES = 64;
     public static final int MAX_POOLS = 64;
-    public static final int MAX_RULES = 512;
 
     public final Map<String, PointPool> pools = new LinkedHashMap<>();
     public final Map<String, Category> categories = new LinkedHashMap<>();
-    public final Map<String, PointRule> rules = new LinkedHashMap<>();
     public final Map<String, SkillNode> nodes = new LinkedHashMap<>();
 
     public AtlasDefinition copy() {
         AtlasDefinition d = new AtlasDefinition();
         pools.forEach((k, v) -> d.pools.put(k, v.copy()));
         categories.forEach((k, v) -> d.categories.put(k, v.copy()));
-        rules.forEach((k, v) -> d.rules.put(k, v.copy()));
         nodes.forEach((k, v) -> d.nodes.put(k, v.copy()));
         return d;
     }
@@ -92,20 +89,11 @@ public final class AtlasDefinition {
         return a;
     }
 
-    public JsonArray rulesJson() {
-        JsonArray a = new JsonArray();
-        for (PointRule r : rules.values()) {
-            a.add(r.toJson());
-        }
-        return a;
-    }
-
     public JsonObject toJson() {
         JsonObject o = new JsonObject();
         o.addProperty("format", FORMAT);
         o.add("pools", poolsJson());
         o.add("categories", categoriesJson());
-        o.add("rules", rulesJson());
         JsonArray n = new JsonArray();
         for (SkillNode node : nodes.values()) {
             n.add(node.toJson());
@@ -125,12 +113,6 @@ public final class AtlasDefinition {
         for (Category c : Json.list(o, "categories", MAX_CATEGORIES, Category::fromJson)) {
             if (categories.put(c.id, c) != null) {
                 throw new AtlasException("skill_atlas.error.duplicate", c.id);
-            }
-        }
-        rules.clear();
-        for (PointRule r : Json.list(o, "rules", MAX_RULES, PointRule::fromJson)) {
-            if (rules.put(r.id, r) != null) {
-                throw new AtlasException("skill_atlas.error.duplicate", r.id);
             }
         }
     }
@@ -158,20 +140,12 @@ public final class AtlasDefinition {
         if (categories.size() > MAX_CATEGORIES) {
             throw new AtlasException("skill_atlas.error.too_many", "categories", String.valueOf(MAX_CATEGORIES));
         }
-        if (rules.size() > MAX_RULES) {
-            throw new AtlasException("skill_atlas.error.too_many", "rules", String.valueOf(MAX_RULES));
-        }
         if (nodes.size() > MAX_NODES) {
             throw new AtlasException("skill_atlas.error.too_many", "nodes", String.valueOf(MAX_NODES));
         }
         for (Category c : categories.values()) {
             if (!pools.containsKey(c.pool)) {
                 throw new AtlasException("skill_atlas.error.missing_pool", c.pool);
-            }
-        }
-        for (PointRule r : rules.values()) {
-            if (!pools.containsKey(r.pool)) {
-                throw new AtlasException("skill_atlas.error.missing_pool", r.pool);
             }
         }
         Map<String, Integer> indegree = new HashMap<>();
