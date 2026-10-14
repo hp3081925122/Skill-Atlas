@@ -1,15 +1,25 @@
 package com.hp.skillatlas;
 
-import com.mojang.logging.LogUtils;
 import com.hp.skillatlas.network.AtlasNetwork;
-import com.hp.skillatlas.server.AtlasEvents;
-import net.minecraftforge.common.MinecraftForge;
+import com.mojang.logging.LogUtils;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
 import org.slf4j.Logger;
 
-@Mod(SkillAtlas.ID)
+@Mod(SkillAtlas.MOD_ID)
 public final class SkillAtlas {
-    public static final String ID = "skill_atlas";
+    public static final String MOD_ID = "skill_atlas";
     public static final Logger LOGGER = LogUtils.getLogger();
-    public SkillAtlas() { AtlasNetwork.register(); MinecraftForge.EVENT_BUS.register(new AtlasEvents()); }
+
+    public SkillAtlas() {
+        ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, AtlasConfig.SERVER_SPEC);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, AtlasConfig.CLIENT_SPEC);
+        AtlasNetwork.register();
+    }
+
+    public static ResourceLocation id(String path) {
+        return new ResourceLocation(MOD_ID, path);
+    }
 }

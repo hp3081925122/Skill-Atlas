@@ -1,16 +1,15 @@
-Skill Atlas includes the following third-party libraries through Forge JarJar:
+Skill Atlas bundles the following third-party libraries through Jar-in-Jar:
 
-TinyPinyin 2.0.3
-https://github.com/promeg/TinyPinyin
-Licensed under the Apache License, Version 2.0.
-The license text is included as LICENSE-TinyPinyin.txt.
+TinyPinyin 2.0.3 (com.github.promeg:tinypinyin)
+Copyright 2017 promeG
+Licensed under the Apache License, Version 2.0
+https://github.com/promeG/TinyPinyin
 
-org.ahocorasick:ahocorasick 0.3.0
+Aho-Corasick 0.3.0 (org.ahocorasick:ahocorasick)
+Copyright 2014 Robert Bor
+Licensed under the Apache License, Version 2.0
 https://github.com/robert-bor/aho-corasick
-Licensed under the Apache License, Version 2.0.
-The Apache 2.0 license text is included as LICENSE-ahocorasick.txt.
 
-UI Pack - Pixel Adventure by Kenney (www.kenney.nl)
-License: CC0 1.0 Universal; see LICENSE-Kenney-UI.txt.
-Source: https://kenney.nl/assets/ui-pack-pixel-adventure
-Selected original PNG files are bundled unchanged; rendered using configurable slices.
+Apache License, Version 2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+The user interface textures in assets/skill_atlas/textures/gui are original artwork made for Skill Atlas.
