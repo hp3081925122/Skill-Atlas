@@ -24,12 +24,14 @@ public final class AtlasDefinition {
     public final Map<String, PointPool> pools = new LinkedHashMap<>();
     public final Map<String, Category> categories = new LinkedHashMap<>();
     public final Map<String, SkillNode> nodes = new LinkedHashMap<>();
+    public AtlasTexts texts = new AtlasTexts();
 
     public AtlasDefinition copy() {
         AtlasDefinition d = new AtlasDefinition();
         pools.forEach((k, v) -> d.pools.put(k, v.copy()));
         categories.forEach((k, v) -> d.categories.put(k, v.copy()));
         nodes.forEach((k, v) -> d.nodes.put(k, v.copy()));
+        d.texts = texts.copy();
         return d;
     }
 
@@ -128,6 +130,9 @@ public final class AtlasDefinition {
             if (d.nodes.put(n.id, n) != null) {
                 throw new AtlasException("skill_atlas.error.duplicate", n.id);
             }
+        }
+        if (o.has("texts") && o.get("texts").isJsonObject()) {
+            d.texts = AtlasTexts.fromJson(o.getAsJsonObject("texts"));
         }
         d.validate();
         return d;

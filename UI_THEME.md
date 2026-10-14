@@ -72,4 +72,4 @@ assets/skill_atlas/textures/gui/atlas.png
 
 ## 画布背景
 
-默认画布背景为单独的贴图 `assets/skill_atlas/textures/gui/canvas.png`（512 × 512，深炭灰），按比例铺满画布并居中裁剪，尺寸不限，资源包可直接替换。每个分类还可以在编辑分类时单独指定背景贴图，优先于默认背景。
+默认画布背景为单独的贴图 `assets/skill_atlas/textures/gui/canvas.png`（1024 × 576，暖棕色星盘：羊皮纸云雾、淡金同心圆刻度、星点与星座连线、四周暗角；生成脚本见 `D:/AI临时文件/gen_canvas.py`），按比例铺满画布并居中裁剪，尺寸不限，资源包可直接替换。每个分类还可以在编辑分类时单独指定背景贴图，优先于默认背景。

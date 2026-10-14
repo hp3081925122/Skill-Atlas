@@ -17,6 +17,7 @@ import com.hp.skillatlas.data.Category;
 import com.hp.skillatlas.data.EditOps;
 import com.hp.skillatlas.data.Icon;
 import com.hp.skillatlas.data.Json;
+import com.hp.skillatlas.data.Texts;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -65,7 +66,7 @@ public final class CategoryDialog extends Dialog {
         id.valid = s -> Json.validId(s) && (!create || !ClientAtlas.definition.categories.containsKey(s));
         id.onChange = s -> c.id = s;
         inputs.add(f.row(Component.translatable("skill_atlas.ui.field.id"), id));
-        TextInput name = new TextInput(c.name).max(128).placeholder(Component.translatable("skill_atlas.ui.field.name.placeholder"));
+        TextInput name = new TextInput(Texts.display(c.name)).max(128).placeholder(Component.translatable("skill_atlas.ui.field.name.placeholder"));
         name.onChange = s -> c.name = s;
         inputs.add(f.row(Component.translatable("skill_atlas.ui.field.name"), name));
         TextInput icon = new TextInput(c.icon.id).max(256);

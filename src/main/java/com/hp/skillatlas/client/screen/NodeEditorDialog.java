@@ -26,6 +26,7 @@ import com.hp.skillatlas.data.EditOps;
 import com.hp.skillatlas.data.Icon;
 import com.hp.skillatlas.data.ItemCost;
 import com.hp.skillatlas.data.Json;
+import com.hp.skillatlas.data.Texts;
 import com.hp.skillatlas.data.Prerequisite;
 import com.hp.skillatlas.data.Reward;
 import com.hp.skillatlas.data.RewardOperation;
@@ -270,10 +271,10 @@ public final class NodeEditorDialog extends Dialog {
             id.onChange = s -> n.id = s;
             inputs.add(f.row(Component.translatable("skill_atlas.ui.field.id"), id));
         }
-        TextInput name = text(n.name, 128, Section.NAME, v -> n.name = v);
+        TextInput name = text(Texts.display(n.name), 128, Section.NAME, v -> n.name = v);
         name.placeholder(Component.translatable("skill_atlas.ui.field.name.placeholder"));
         f.row(Component.translatable("skill_atlas.ui.field.name"), name);
-        TextInput aliases = text(n.aliases, 512, Section.NAME, v -> n.aliases = v);
+        TextInput aliases = text(Texts.display(n.aliases), 512, Section.NAME, v -> n.aliases = v);
         aliases.placeholder(Component.translatable("skill_atlas.ui.field.aliases.placeholder"));
         f.row(Component.translatable("skill_atlas.ui.field.aliases"), aliases);
 
@@ -320,7 +321,7 @@ public final class NodeEditorDialog extends Dialog {
         }
 
         heading(f, Section.TOOLTIP, "skill_atlas.ui.editor.section.tooltip");
-        TextInput tip = text(n.tooltip, 4000, Section.TOOLTIP, v -> n.tooltip = v).multiline();
+        TextInput tip = text(Texts.display(n.tooltip), 4000, Section.TOOLTIP, v -> n.tooltip = v).multiline();
         tip.h = 54;
         f.row(Component.translatable("skill_atlas.ui.field.tooltip"), tip);
         hint(f, Component.translatable("skill_atlas.ui.editor.text_hint"), Theme.DIM);

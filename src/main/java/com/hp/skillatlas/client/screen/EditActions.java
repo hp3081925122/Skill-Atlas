@@ -9,6 +9,7 @@ import com.hp.skillatlas.client.ClientAtlas;
 import com.hp.skillatlas.client.Names;
 import com.hp.skillatlas.client.ui.Theme;
 import com.hp.skillatlas.data.AtlasDefinition;
+import com.hp.skillatlas.data.AtlasTexts;
 import com.hp.skillatlas.data.Category;
 import com.hp.skillatlas.data.EditOps;
 import com.hp.skillatlas.data.Icon;
@@ -29,6 +30,7 @@ import java.util.Set;
 public final class EditActions {
     private static final String MARKER = "skill_atlas";
     private static final int MAX_CLIPBOARD = 8 * 1024 * 1024;
+    private static AtlasTexts clipboardTexts = new AtlasTexts();
 
     private EditActions() {
     }
@@ -223,14 +225,24 @@ public final class EditActions {
         }
         List<SkillNode> copies = new ArrayList<>();
         JsonArray arr = new JsonArray();
+        AtlasDefinition picked = new AtlasDefinition();
         for (SkillNode n : nodes) {
             copies.add(n.copy());
             arr.add(n.toJson());
+            picked.nodes.put(n.id, n);
+        }
+        Set<String> keys = new HashSet<>();
+        AtlasTexts.collect(picked, keys);
+        AtlasTexts texts = new AtlasTexts();
+        for (String key : keys) {
+            ClientAtlas.definition.texts.entries(key).forEach((lang, text) -> texts.put(lang, key, text));
         }
         ClientAtlas.clipboard = copies;
+        clipboardTexts = texts;
         JsonObject o = new JsonObject();
         o.addProperty(MARKER, "nodes");
         o.add("nodes", arr);
+        o.add("texts", texts.toJson());
         Minecraft.getInstance().keyboardHandler.setClipboard(Json.COMPACT.toJson(o));
         main.status(Component.translatable("skill_atlas.ui.copied", copies.size()), Theme.TEAL);
     }
@@ -263,6 +275,7 @@ public final class EditActions {
                         out.add(SkillNode.fromJson(e));
                     }
                     if (!out.isEmpty()) {
+                        clipboardTexts = AtlasTexts.fromJson(o.getAsJsonObject("texts"));
                         return out;
                     }
                 }
@@ -275,6 +288,17 @@ public final class EditActions {
             out.add(n.copy());
         }
         return out;
+    }
+
+    private static String pastedText(String raw, String lang) {
+        if (!AtlasTexts.isKey(raw) || ClientAtlas.definition.texts.has(raw)) {
+            return raw;
+        }
+        String text = clipboardTexts.resolve(raw, lang);
+        if (text == null) {
+            return raw;
+        }
+        return text;
     }
 
     public static void paste(MainLayer main, int wx, int wy) {
@@ -307,6 +331,7 @@ public final class EditActions {
             taken.add(id);
             ids.put(n.id, id);
         }
+        String lang = Minecraft.getInstance().getLanguageManager().getSelected();
         JsonArray ops = new JsonArray();
         List<String> created = new ArrayList<>();
         for (SkillNode n : src) {
@@ -315,6 +340,9 @@ public final class EditActions {
             c.category = ClientAtlas.category;
             c.x = Math.max(-SkillNode.MAX_COORD, Math.min(SkillNode.MAX_COORD, n.x + offX));
             c.y = Math.max(-SkillNode.MAX_COORD, Math.min(SkillNode.MAX_COORD, n.y + offY));
+            c.name = pastedText(c.name, lang);
+            c.aliases = pastedText(c.aliases, lang);
+            c.tooltip = pastedText(c.tooltip, lang);
             c.prerequisites.clear();
             for (Prerequisite p : n.prerequisites) {
                 String mapped = ids.get(p.node);

@@ -400,7 +400,7 @@
 
   "skill_atlas.ui.field.id": "ID",
   "skill_atlas.ui.field.name": "Name",
-  "skill_atlas.ui.field.name.placeholder": "Display name, supports & color codes or lang keys",
+  "skill_atlas.ui.field.name.placeholder": "Display name, supports & color codes; translated per current language on save",
   "skill_atlas.ui.field.aliases": "Aliases",
   "skill_atlas.ui.field.aliases.placeholder": "Extra search keywords, separated by spaces",
   "skill_atlas.ui.field.category": "Category",
@@ -455,7 +455,7 @@
   "skill_atlas.ui.editor.section.flags": "Display & Unlocking",
   "skill_atlas.ui.editor.section.prerequisites": "Prerequisites",
   "skill_atlas.ui.editor.section.levels": "Levels & Rewards",
-  "skill_atlas.ui.editor.text_hint": "Supports & color codes (e.g. &a for green) and lang keys",
+  "skill_atlas.ui.editor.text_hint": "Supports & color codes (e.g. &a for green); saved as a translation for the current game language",
   "skill_atlas.ui.editor.hidden_hint": "Hidden skills stay invisible to players until their prerequisites are met",
   "skill_atlas.ui.editor.levels_hint": "Only the rewards of the current level apply; command rewards run once when that level is reached; delivery items are taken from the inventory and offhand when learning and are never refunded",
   "skill_atlas.ui.editor.no_prerequisites": "No prerequisites",

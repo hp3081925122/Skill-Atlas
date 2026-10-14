@@ -3,8 +3,11 @@ package com.hp.skillatlas.data;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
+import java.util.function.UnaryOperator;
+
 public final class Texts {
     private static final String CODES = "0123456789abcdefklmnorABCDEFKLMNOR";
+    public static UnaryOperator<String> lookup = UnaryOperator.identity();
 
     private Texts() {
     }
@@ -38,7 +41,18 @@ public final class Texts {
         return sb.toString();
     }
 
+    public static String display(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        return lookup.apply(raw);
+    }
+
     public static MutableComponent component(String raw) {
+        String text = display(raw);
+        if (!text.equals(raw)) {
+            return Component.literal(colorize(text));
+        }
         return Component.translatableWithFallback(raw, colorize(raw));
     }
 

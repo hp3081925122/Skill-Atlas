@@ -50,7 +50,7 @@ public final class AtlasCommands {
                                                 return 0;
                                             }
                                             long value = AtlasServer.progress(player).points(pool);
-                                            c.getSource().sendSuccess(() -> Component.translatable("skill_atlas.command.points.get", player.getDisplayName(), value, poolName(pool)), false);
+                                            c.getSource().sendSuccess(() -> Component.translatable("skill_atlas.command.points.get", player.getDisplayName(), value, poolName(pool, c.getSource())), false);
                                             return (int) Math.min(Integer.MAX_VALUE, value);
                                         }))))
                         .then(Commands.literal("add")
@@ -76,12 +76,12 @@ public final class AtlasCommands {
                                                 .executes(c -> grant(c, IntegerArgumentType.getInteger(c, "level"))))))));
     }
 
-    private static Component poolName(String id) {
+    private static Component poolName(String id, CommandSourceStack source) {
         PointPool p = AtlasServer.definition().pools.get(id);
         if (p == null) {
             return Component.literal(id);
         }
-        return Texts.component(p.name, p.id).withStyle(s -> s.withColor(p.color));
+        return Texts.component(AtlasServer.text(p.name, source), p.id).withStyle(s -> s.withColor(p.color));
     }
 
     private static int points(CommandContext<CommandSourceStack> c, boolean add) throws CommandSyntaxException {
@@ -107,7 +107,7 @@ public final class AtlasCommands {
             key = "skill_atlas.command.points.add";
         }
         String finalKey = key;
-        c.getSource().sendSuccess(() -> Component.translatable(finalKey, amount, poolName(pool), targets.size()), true);
+        c.getSource().sendSuccess(() -> Component.translatable(finalKey, amount, poolName(pool, c.getSource()), targets.size()), true);
         return targets.size();
     }
 
@@ -147,7 +147,7 @@ public final class AtlasCommands {
             applied = AtlasServer.grant(player, node, target);
         }
         int shown = applied;
-        c.getSource().sendSuccess(() -> Component.translatable("skill_atlas.command.grant", Texts.component(node.name, node.id), shown, targets.size()), true);
+        c.getSource().sendSuccess(() -> Component.translatable("skill_atlas.command.grant", Texts.component(AtlasServer.text(node.name, c.getSource()), node.id), shown, targets.size()), true);
         return targets.size();
     }
 }

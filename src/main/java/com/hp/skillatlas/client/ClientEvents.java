@@ -2,6 +2,7 @@ package com.hp.skillatlas.client;
 
 import com.hp.skillatlas.SkillAtlas;
 import com.hp.skillatlas.client.screen.AtlasScreen;
+import com.hp.skillatlas.data.Texts;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -13,6 +14,7 @@ import net.minecraftforge.client.settings.KeyConflictContext;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import org.lwjgl.glfw.GLFW;
 
 public final class ClientEvents {
@@ -29,6 +31,11 @@ public final class ClientEvents {
         @SubscribeEvent
         public static void onKeys(RegisterKeyMappingsEvent event) {
             event.register(OPEN);
+        }
+
+        @SubscribeEvent
+        public static void onSetup(FMLClientSetupEvent event) {
+            Texts.lookup = raw -> ClientAtlas.definition.texts.display(raw, Minecraft.getInstance().getLanguageManager().getSelected());
         }
     }
 
