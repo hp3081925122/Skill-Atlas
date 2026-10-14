@@ -300,16 +300,19 @@ public final class NodeEditorDialog extends Dialog {
             touch(Section.ICON);
             rebuild();
         });
-        Button pick = new Button(Component.translatable("skill_atlas.ui.pick"), () -> stack.push(PickerDialog.items(id -> {
-            n.icon = new Icon(Icon.ITEM, id, n.icon.nbt);
+        Button pick = new Button(Component.translatable("skill_atlas.ui.pick"), () -> stack.push(PickerDialog.itemStacks(e -> {
+            n.icon = new Icon(Icon.ITEM, e.id, e.nbt);
             touch(Section.ICON);
             rebuild();
         })));
-        pick.enabled = !n.icon.isTexture();
-        IconButton preview = new IconButton(() -> n.icon, null);
-        if (!n.icon.isTexture()) {
-            preview.action = pick.action;
+        if (n.icon.isTexture()) {
+            pick.action = () -> stack.push(PickerDialog.textures(id -> {
+                n.icon = new Icon(Icon.TEXTURE, id, n.icon.nbt);
+                touch(Section.ICON);
+                rebuild();
+            }));
         }
+        IconButton preview = new IconButton(() -> n.icon, pick.action);
         f.cells(Component.translatable("skill_atlas.ui.field.icon"), new float[]{1.2F, 2.6F, 5, 2.2F}, preview, iconType, iconId, pick);
         if (n.icon.isTexture()) {
             hint(f, Component.translatable("skill_atlas.ui.icon_type.texture.hint"), Theme.DIM);
@@ -414,8 +417,8 @@ public final class NodeEditorDialog extends Dialog {
             });
             addReward.icon = Sprites.PLUS;
             addReward.enabled = lv.rewards.size() < SkillLevel.MAX_REWARDS;
-            Button addItem = new Button(Component.translatable("skill_atlas.ui.editor.add_item"), () -> stack.push(PickerDialog.items(id -> {
-                lv.items.add(new ItemCost(id, 1, ""));
+            Button addItem = new Button(Component.translatable("skill_atlas.ui.editor.add_item"), () -> stack.push(PickerDialog.itemStacks(e -> {
+                lv.items.add(new ItemCost(e.id, 1, e.nbt));
                 touch(Section.LEVELS);
                 rebuild();
             })));
@@ -442,8 +445,9 @@ public final class NodeEditorDialog extends Dialog {
 
     private void itemCard(Form f, SkillLevel lv, int j) {
         ItemCost c = lv.items.get(j);
-        Runnable pickItem = () -> stack.push(PickerDialog.items(id -> {
-            c.item = id;
+        Runnable pickItem = () -> stack.push(PickerDialog.itemStacks(e -> {
+            c.item = e.id;
+            c.nbt = e.nbt;
             touch(Section.LEVELS);
             rebuild();
         }));

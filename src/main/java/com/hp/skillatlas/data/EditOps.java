@@ -2,7 +2,6 @@ package com.hp.skillatlas.data;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 
 import java.util.ArrayList;
@@ -239,12 +238,7 @@ public final class EditOps {
         if (!c.texts.isEmpty()) {
             JsonObject t = new JsonObject();
             for (String key : c.texts) {
-                Map<String, String> entries = d.texts.entries(key);
-                if (entries.isEmpty()) {
-                    t.add(key, JsonNull.INSTANCE);
-                } else {
-                    t.add(key, AtlasTexts.langJson(entries));
-                }
+                t.add(key, AtlasTexts.langJson(d.texts.entries(key)));
             }
             o.add("texts", t);
         }
