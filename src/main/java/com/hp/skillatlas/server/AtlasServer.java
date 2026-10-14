@@ -7,11 +7,14 @@ import com.hp.skillatlas.ItemCosts;
 import com.hp.skillatlas.SkillAtlas;
 import com.hp.skillatlas.data.AtlasDefinition;
 import com.hp.skillatlas.data.AtlasException;
+import com.hp.skillatlas.data.AtlasTexts;
+import com.hp.skillatlas.data.Category;
 import com.hp.skillatlas.data.AtlasLogic;
 import com.hp.skillatlas.data.DefaultAtlas;
 import com.hp.skillatlas.data.EditOps;
 import com.hp.skillatlas.data.Json;
 import com.hp.skillatlas.data.PlayerProgress;
+import com.hp.skillatlas.data.PointPool;
 import com.hp.skillatlas.data.SkillLevel;
 import com.hp.skillatlas.data.SkillNode;
 import com.hp.skillatlas.network.AtlasNetwork;
@@ -19,6 +22,7 @@ import com.hp.skillatlas.network.Payload;
 import com.hp.skillatlas.network.PayloadAssembler;
 import com.hp.skillatlas.network.ProgressPacket;
 import com.hp.skillatlas.network.ResultPacket;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,7 +30,10 @@ import net.minecraftforge.fml.loading.FMLPaths;
 import net.minecraftforge.network.PacketDistributor;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -34,10 +41,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 
 public final class AtlasServer {
@@ -90,6 +99,19 @@ public final class AtlasServer {
         return FMLPaths.CONFIGDIR.get().resolve(SkillAtlas.MOD_ID).resolve("atlas.json");
     }
 
+    public static Path langDir() {
+        return file().resolveSibling("lang");
+    }
+
+    public static String text(String raw, CommandSourceStack source) {
+        ServerPlayer player = source.getPlayer();
+        String lang = AtlasTexts.DEFAULT_LANG;
+        if (player != null) {
+            lang = player.getLanguage();
+        }
+        return definition.texts.display(raw, lang);
+    }
+
     public static void start(MinecraftServer s) {
         server = s;
         data = ProgressData.get(s);
@@ -123,9 +145,14 @@ public final class AtlasServer {
             if (Files.exists(path)) {
                 String text = Files.readString(path, StandardCharsets.UTF_8);
                 next = AtlasDefinition.fromJson(JsonParser.parseString(text).getAsJsonObject());
+                readLangs(next);
+                if (migrate(next)) {
+                    write(path, next);
+                }
             } else {
                 next = DefaultAtlas.create();
                 next.validate();
+                migrate(next);
                 write(path, next);
                 SkillAtlas.LOGGER.info("Created default skill atlas at {}", path);
             }
@@ -150,10 +177,121 @@ public final class AtlasServer {
         SkillAtlas.LOGGER.error("Failed to load skill atlas from {}: {}. Editing is disabled until the file is fixed and /skillatlas reload succeeds", path, error);
     }
 
+    private static void readLangs(AtlasDefinition d) throws IOException {
+        Path dir = langDir();
+        if (!Files.isDirectory(dir)) {
+            return;
+        }
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(dir, "*.json")) {
+            for (Path f : files) {
+                String name = f.getFileName().toString();
+                String lang = name.substring(0, name.length() - 5);
+                if (!AtlasTexts.validLang(lang)) {
+                    SkillAtlas.LOGGER.warn("Ignoring skill atlas language file with invalid name: {}", f);
+                    continue;
+                }
+                try {
+                    d.texts.readLang(lang, JsonParser.parseString(Files.readString(f, StandardCharsets.UTF_8)).getAsJsonObject());
+                } catch (RuntimeException e) {
+                    SkillAtlas.LOGGER.warn("Failed to read skill atlas language file {}: {}", f, e.toString());
+                }
+            }
+        }
+        SkillAtlas.LOGGER.debug("Loaded skill atlas texts: {} languages, {} keys", d.texts.langs.size(), d.texts.keys().size());
+    }
+
+    private static boolean migrate(AtlasDefinition d) {
+        Map<String, JsonObject> bundled = new HashMap<>();
+        for (String lang : new String[]{"en_us", "zh_cn"}) {
+            try (InputStream in = AtlasServer.class.getResourceAsStream("/assets/" + SkillAtlas.MOD_ID + "/lang/" + lang + ".json")) {
+                if (in != null) {
+                    bundled.put(lang, JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8)).getAsJsonObject());
+                }
+            } catch (IOException | RuntimeException e) {
+                SkillAtlas.LOGGER.warn("Failed to read bundled language {}: {}", lang, e.toString());
+            }
+        }
+        int migrated = 0;
+        for (SkillNode n : d.nodes.values()) {
+            String name = migrate(d, bundled, AtlasTexts.key("node", n.id, "name"), n.name);
+            String aliases = migrate(d, bundled, AtlasTexts.key("node", n.id, "aliases"), n.aliases);
+            String tooltip = migrate(d, bundled, AtlasTexts.key("node", n.id, "tooltip"), n.tooltip);
+            if (!name.equals(n.name) || !aliases.equals(n.aliases) || !tooltip.equals(n.tooltip)) {
+                migrated++;
+            }
+            n.name = name;
+            n.aliases = aliases;
+            n.tooltip = tooltip;
+        }
+        for (Category c : d.categories.values()) {
+            String name = migrate(d, bundled, AtlasTexts.key("category", c.id, "name"), c.name);
+            if (!name.equals(c.name)) {
+                migrated++;
+            }
+            c.name = name;
+        }
+        for (PointPool p : d.pools.values()) {
+            String name = migrate(d, bundled, AtlasTexts.key("pool", p.id, "name"), p.name);
+            String description = migrate(d, bundled, AtlasTexts.key("pool", p.id, "description"), p.description);
+            if (!name.equals(p.name) || !description.equals(p.description)) {
+                migrated++;
+            }
+            p.name = name;
+            p.description = description;
+        }
+        EditOps.Changes pruned = new EditOps.Changes();
+        EditOps.prune(d, pruned);
+        if (migrated > 0 || !pruned.texts.isEmpty()) {
+            SkillAtlas.LOGGER.info("Migrated {} skill atlas entries to generated translation keys, pruned {} unused keys", migrated, pruned.texts.size());
+            return true;
+        }
+        return false;
+    }
+
+    private static String migrate(AtlasDefinition d, Map<String, JsonObject> bundled, String own, String raw) {
+        if (raw.isEmpty() || AtlasTexts.isKey(raw) || !raw.startsWith(SkillAtlas.MOD_ID + ".")) {
+            return raw;
+        }
+        Map<String, String> found = new LinkedHashMap<>();
+        bundled.forEach((lang, o) -> {
+            if (o.has(raw)) {
+                found.put(lang, o.get(raw).getAsString());
+            }
+        });
+        if (found.isEmpty()) {
+            return raw;
+        }
+        d.texts.set(own, found);
+        return own;
+    }
+
     private static void write(Path path, AtlasDefinition d) throws IOException {
         Files.createDirectories(path.getParent());
+        writeFile(path, Json.PRETTY.toJson(d.toJson()));
+        Path dir = langDir();
+        Set<String> langs = new TreeSet<>(d.texts.langs.keySet());
+        if (Files.isDirectory(dir)) {
+            try (DirectoryStream<Path> files = Files.newDirectoryStream(dir, "*.json")) {
+                for (Path f : files) {
+                    String name = f.getFileName().toString();
+                    String lang = name.substring(0, name.length() - 5);
+                    if (AtlasTexts.validLang(lang)) {
+                        langs.add(lang);
+                    }
+                }
+            }
+        }
+        if (!langs.isEmpty()) {
+            Files.createDirectories(dir);
+        }
+        for (String lang : langs) {
+            writeFile(dir.resolve(lang + ".json"), Json.PRETTY.toJson(AtlasTexts.langJson(d.texts.langs.getOrDefault(lang, Map.of()))));
+        }
+    }
+
+    private static void writeFile(Path path, String content) throws IOException {
         Path tmp = path.resolveSibling(path.getFileName() + ".tmp");
-        Files.writeString(tmp, Json.PRETTY.toJson(d.toJson()), StandardCharsets.UTF_8);
+        Files.writeString(tmp, content, StandardCharsets.UTF_8);
         if (Files.exists(path)) {
             Files.copy(path, path.resolveSibling(path.getFileName() + ".bak"), StandardCopyOption.REPLACE_EXISTING);
         }
@@ -228,7 +366,9 @@ public final class AtlasServer {
             JsonObject o = new JsonObject();
             o.addProperty("revision", revision);
             o.addProperty("locked", loadFailed);
-            o.add("definition", definition.toJson());
+            JsonObject def = definition.toJson();
+            def.add("texts", definition.texts.toJson());
+            o.add("definition", def);
             fullCache = Payload.split(Payload.FULL, o, Payload.TO_CLIENT_CHUNK);
         }
         return fullCache;
@@ -306,7 +446,7 @@ public final class AtlasServer {
         AtlasDefinition next = definition.copy();
         EditOps.Changes changes;
         try {
-            changes = EditOps.apply(next, Json.array(json, "ops"));
+            changes = EditOps.apply(next, Json.array(json, "ops"), AtlasTexts.lang(player.getLanguage()));
             next.validate();
             RegistryCheck.check(definition, next, changes, player);
         } catch (AtlasException e) {
@@ -330,7 +470,7 @@ public final class AtlasServer {
                 }
             }
             definitionChanged(changes.shrunk);
-            SkillAtlas.LOGGER.debug("Applied atlas edit from {}: {} nodes, meta {}", player.getGameProfile().getName(), changes.nodes.size(), changes.meta);
+            SkillAtlas.LOGGER.debug("Applied atlas edit from {}: {} nodes, meta {}, {} text keys in {}", player.getGameProfile().getName(), changes.nodes.size(), changes.meta, changes.texts.size(), player.getLanguage());
         }
         result(player, request, true, "", List.of());
     }

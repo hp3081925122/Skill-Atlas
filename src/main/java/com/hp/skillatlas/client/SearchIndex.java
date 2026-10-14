@@ -32,7 +32,7 @@ public final class SearchIndex {
         for (SkillNode n : ClientAtlas.definition.nodes.values()) {
             String plain = Names.nodePlain(n);
             String[] tooltip = PinyinText.forms(Texts.component(n.tooltip).getString());
-            out.add(new Entry(n, plain, PinyinText.forms(plain), PinyinText.forms(n.aliases), tooltip, n.id.toLowerCase()));
+            out.add(new Entry(n, plain, PinyinText.forms(plain), PinyinText.forms(Texts.display(n.aliases)), tooltip, n.id.toLowerCase()));
         }
         entries = out;
         builtVersion = ClientAtlas.version;

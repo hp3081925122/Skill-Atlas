@@ -185,7 +185,7 @@ public final class PointTracker {
         p.addPoints(pool.id, gain);
         p.addAwarded(pool.id, gain);
         if (AtlasConfig.NOTIFY_POINTS.get()) {
-            Component name = Texts.component(pool.name, pool.id).withStyle(s -> s.withColor(pool.color));
+            Component name = Texts.component(AtlasServer.definition().texts.display(pool.name, player.getLanguage()), pool.id).withStyle(s -> s.withColor(pool.color));
             player.displayClientMessage(Component.translatable("skill_atlas.message.points_gained", gain, name), true);
         }
     }

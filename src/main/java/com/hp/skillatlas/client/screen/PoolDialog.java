@@ -20,6 +20,7 @@ import com.hp.skillatlas.client.ui.Widget;
 import com.hp.skillatlas.data.AtlasException;
 import com.hp.skillatlas.data.EditOps;
 import com.hp.skillatlas.data.Json;
+import com.hp.skillatlas.data.Texts;
 import com.hp.skillatlas.data.PointPool;
 import com.hp.skillatlas.data.RuleType;
 import net.minecraft.core.registries.Registries;
@@ -127,7 +128,7 @@ public final class PoolDialog extends Dialog {
         id.valid = s -> Json.validId(s) && (!create || !ClientAtlas.definition.pools.containsKey(s));
         id.onChange = s -> p.id = s;
         inputs.add(f.row(Component.translatable("skill_atlas.ui.field.id"), id));
-        TextInput name = new TextInput(p.name).max(128).placeholder(Component.translatable("skill_atlas.ui.field.name.placeholder"));
+        TextInput name = new TextInput(Texts.display(p.name)).max(128).placeholder(Component.translatable("skill_atlas.ui.field.name.placeholder"));
         name.onChange = s -> p.name = s;
         inputs.add(f.row(Component.translatable("skill_atlas.ui.field.name"), name));
         TextInput color = new TextInput(PointPool.hex(p.color)).max(7).filter(s -> s.matches("#?[0-9a-fA-F]{0,6}"));
@@ -231,7 +232,7 @@ public final class PoolDialog extends Dialog {
         };
         inputs.add(f.row(Component.translatable("skill_atlas.ui.field.limit"), limit));
         NodeEditorDialog.hint(f, Component.translatable("skill_atlas.ui.rule.limit.hint"), Theme.DIM);
-        TextInput description = new TextInput(p.description).max(PointPool.MAX_DESCRIPTION).multiline().placeholder(Component.translatable("skill_atlas.ui.rule.description.placeholder"));
+        TextInput description = new TextInput(Texts.display(p.description)).max(PointPool.MAX_DESCRIPTION).multiline().placeholder(Component.translatable("skill_atlas.ui.rule.description.placeholder"));
         description.h = 40;
         description.onChange = s -> p.description = s;
         f.row(Component.translatable("skill_atlas.ui.field.earn_tooltip"), description);

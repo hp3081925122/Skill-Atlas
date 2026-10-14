@@ -2,6 +2,7 @@ package com.hp.skillatlas.data;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 
 import java.util.ArrayList;
@@ -21,10 +22,11 @@ public final class EditOps {
         public final Set<String> shrunk = new HashSet<>();
         public final Set<String> categories = new HashSet<>();
         public final Set<String> pools = new HashSet<>();
+        public final Set<String> texts = new LinkedHashSet<>();
         public boolean meta;
 
         public boolean isEmpty() {
-            return nodes.isEmpty() && !meta;
+            return nodes.isEmpty() && !meta && texts.isEmpty();
         }
     }
 
@@ -32,6 +34,10 @@ public final class EditOps {
     }
 
     public static Changes apply(AtlasDefinition d, JsonArray ops) {
+        return apply(d, ops, null);
+    }
+
+    public static Changes apply(AtlasDefinition d, JsonArray ops, String lang) {
         if (ops.size() > MAX_OPS) {
             throw new AtlasException("skill_atlas.error.too_many", "ops", String.valueOf(MAX_OPS));
         }
@@ -53,6 +59,15 @@ public final class EditOps {
                     }
                     if (old != null && n.maxLevel() < old.maxLevel()) {
                         c.shrunk.add(n.id);
+                    }
+                    if (lang != null) {
+                        SkillNode prev = old;
+                        if (prev == null) {
+                            prev = new SkillNode();
+                        }
+                        n.name = localize(d, c, lang, AtlasTexts.key("node", n.id, "name"), n.name, prev.name);
+                        n.aliases = localize(d, c, lang, AtlasTexts.key("node", n.id, "aliases"), n.aliases, prev.aliases);
+                        n.tooltip = localize(d, c, lang, AtlasTexts.key("node", n.id, "tooltip"), n.tooltip, prev.tooltip);
                     }
                     d.nodes.put(n.id, n);
                     deleted.remove(n.id);
@@ -86,6 +101,13 @@ public final class EditOps {
                     boolean create = Json.bool(o, "create", false);
                     if (create && d.categories.containsKey(cat.id)) {
                         throw new AtlasException("skill_atlas.error.duplicate", cat.id);
+                    }
+                    if (lang != null) {
+                        String prev = "";
+                        if (d.categories.containsKey(cat.id)) {
+                            prev = d.categories.get(cat.id).name;
+                        }
+                        cat.name = localize(d, c, lang, AtlasTexts.key("category", cat.id, "name"), cat.name, prev);
                     }
                     d.categories.put(cat.id, cat);
                     c.categories.add(cat.id);
@@ -130,6 +152,14 @@ public final class EditOps {
                     if (create && d.pools.containsKey(p.id)) {
                         throw new AtlasException("skill_atlas.error.duplicate", p.id);
                     }
+                    if (lang != null) {
+                        PointPool prev = d.pools.get(p.id);
+                        if (prev == null) {
+                            prev = new PointPool();
+                        }
+                        p.name = localize(d, c, lang, AtlasTexts.key("pool", p.id, "name"), p.name, prev.name);
+                        p.description = localize(d, c, lang, AtlasTexts.key("pool", p.id, "description"), p.description, prev.description);
+                    }
                     d.pools.put(p.id, p);
                     c.pools.add(p.id);
                     c.meta = true;
@@ -155,7 +185,42 @@ public final class EditOps {
                 }
             }
         }
+        prune(d, c);
         return c;
+    }
+
+    private static String localize(AtlasDefinition d, Changes c, String lang, String own, String value, String previous) {
+        if (value.isEmpty()) {
+            return "";
+        }
+        if (AtlasTexts.isKey(value)) {
+            if (value.equals(own) || !d.texts.has(value)) {
+                return value;
+            }
+            d.texts.set(own, d.texts.entries(value));
+            c.texts.add(own);
+            return own;
+        }
+        if (value.matches("[a-z0-9_-]+([.][a-z0-9_-]+)+")) {
+            return value;
+        }
+        if (AtlasTexts.isKey(previous) && value.equals(d.texts.resolve(previous, lang))) {
+            return localize(d, c, lang, own, previous, "");
+        }
+        d.texts.put(lang, own, value);
+        c.texts.add(own);
+        return own;
+    }
+
+    public static void prune(AtlasDefinition d, Changes c) {
+        Set<String> used = new HashSet<>();
+        AtlasTexts.collect(d, used);
+        for (String key : d.texts.keys()) {
+            if (!used.contains(key)) {
+                d.texts.remove(key);
+                c.texts.add(key);
+            }
+        }
     }
 
     public static JsonObject patch(AtlasDefinition d, Changes c, long revision) {
@@ -171,10 +236,35 @@ public final class EditOps {
             o.add("pools", d.poolsJson());
             o.add("categories", d.categoriesJson());
         }
+        if (!c.texts.isEmpty()) {
+            JsonObject t = new JsonObject();
+            for (String key : c.texts) {
+                Map<String, String> entries = d.texts.entries(key);
+                if (entries.isEmpty()) {
+                    t.add(key, JsonNull.INSTANCE);
+                } else {
+                    t.add(key, AtlasTexts.langJson(entries));
+                }
+            }
+            o.add("texts", t);
+        }
         return o;
     }
 
     public static void applyPatch(AtlasDefinition d, JsonObject patch) {
+        JsonObject t = patch.getAsJsonObject("texts");
+        if (t != null) {
+            for (Map.Entry<String, JsonElement> e : t.entrySet()) {
+                d.texts.remove(e.getKey());
+                if (e.getValue() != null && e.getValue().isJsonObject()) {
+                    for (Map.Entry<String, JsonElement> l : e.getValue().getAsJsonObject().entrySet()) {
+                        if (AtlasTexts.validLang(l.getKey()) && AtlasTexts.isKey(e.getKey())) {
+                            d.texts.put(l.getKey(), e.getKey(), l.getValue().getAsString());
+                        }
+                    }
+                }
+            }
+        }
         if (Json.bool(patch, "meta", false)) {
             d.readMeta(patch);
         }
