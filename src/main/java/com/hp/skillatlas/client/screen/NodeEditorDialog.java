@@ -33,8 +33,6 @@ import com.hp.skillatlas.data.RewardOperation;
 import com.hp.skillatlas.data.RewardType;
 import com.hp.skillatlas.data.SkillLevel;
 import com.hp.skillatlas.data.SkillNode;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -128,15 +126,6 @@ public final class NodeEditorDialog extends Dialog {
     public static void hint(Form f, Component text, int color) {
         Label l = new Label(text, color).wrapped(f.width());
         f.full(l, l.h);
-    }
-
-    private static boolean validNbt(String s) {
-        try {
-            TagParser.parseTag(s);
-            return true;
-        } catch (CommandSyntaxException e) {
-            return false;
-        }
     }
 
     private static boolean registered(IForgeRegistry<?> registry, String id) {
@@ -293,34 +282,29 @@ public final class NodeEditorDialog extends Dialog {
         f.row(Component.translatable("skill_atlas.ui.field.category"), cat);
 
         heading(f, Section.ICON, "skill_atlas.ui.editor.section.icon");
-        TextInput iconId = text(n.icon.id, 256, Section.ICON, v -> n.icon = new Icon(n.icon.type, Json.normalizeResource(v), n.icon.nbt));
-        iconId.valid = v -> Json.validResource(Json.normalizeResource(v));
         CycleButton<String> iconType = new CycleButton<>(List.of(Icon.ITEM, Icon.TEXTURE), n.icon.type, t -> Component.translatable("skill_atlas.ui.icon_type." + t), v -> {
-            n.icon = new Icon(v, n.icon.id, n.icon.nbt);
+            n.icon = new Icon(v, n.icon.id, "");
             touch(Section.ICON);
             rebuild();
         });
-        Button pick = new Button(Component.translatable("skill_atlas.ui.pick"), () -> stack.push(PickerDialog.itemStacks(e -> {
-            n.icon = new Icon(Icon.ITEM, e.id, e.nbt);
-            touch(Section.ICON);
-            rebuild();
-        })));
         if (n.icon.isTexture()) {
-            pick.action = () -> stack.push(PickerDialog.textures(id -> {
-                n.icon = new Icon(Icon.TEXTURE, id, n.icon.nbt);
+            TextInput iconId = text(n.icon.id, 256, Section.ICON, v -> n.icon = new Icon(Icon.TEXTURE, Json.normalizeResource(v), ""));
+            iconId.valid = v -> Json.validResource(Json.normalizeResource(v));
+            Button pick = new Button(Component.translatable("skill_atlas.ui.pick"), () -> stack.push(PickerDialog.textures(id -> {
+                n.icon = new Icon(Icon.TEXTURE, id, "");
                 touch(Section.ICON);
                 rebuild();
-            }));
-        }
-        IconButton preview = new IconButton(() -> n.icon, pick.action);
-        f.cells(Component.translatable("skill_atlas.ui.field.icon"), new float[]{1.2F, 2.6F, 5, 2.2F}, preview, iconType, iconId, pick);
-        if (n.icon.isTexture()) {
+            })));
+            IconButton preview = new IconButton(() -> n.icon, pick.action);
+            f.cells(Component.translatable("skill_atlas.ui.field.icon"), new float[]{1.2F, 2.6F, 5, 2.2F}, preview, iconType, iconId, pick);
             hint(f, Component.translatable("skill_atlas.ui.icon_type.texture.hint"), Theme.DIM);
         } else {
-            TextInput nbt = text(n.icon.nbt, 4096, Section.ICON, v -> n.icon = new Icon(n.icon.type, n.icon.id, v.trim()));
-            nbt.placeholder(Component.translatable("skill_atlas.ui.field.nbt.placeholder"));
-            nbt.valid = v -> v.isBlank() || validNbt(v);
-            f.row(Component.translatable("skill_atlas.ui.field.nbt"), nbt);
+            ItemSlot slot = new ItemSlot(() -> n.icon, () -> stack.push(PickerDialog.itemStacks(e -> {
+                n.icon = new Icon(Icon.ITEM, e.id, e.nbt);
+                touch(Section.ICON);
+                rebuild();
+            })));
+            f.cells(Component.translatable("skill_atlas.ui.field.icon"), new float[]{2.6F, 8.2F}, iconType, slot);
         }
 
         heading(f, Section.TOOLTIP, "skill_atlas.ui.editor.section.tooltip");
@@ -451,24 +435,15 @@ public final class NodeEditorDialog extends Dialog {
             touch(Section.LEVELS);
             rebuild();
         }));
-        IconButton preview = new IconButton(() -> new Icon(Icon.ITEM, c.item, c.nbt), pickItem);
-        preview.tip(() -> List.of(Names.item(c)));
-        TextInput id = text(c.item, 256, Section.LEVELS, v -> c.item = Json.normalizeResource(v));
-        id.valid = v -> registered(ForgeRegistries.ITEMS, v);
-        id.tip(() -> List.of(Names.item(c)));
+        ItemSlot slot = new ItemSlot(() -> new Icon(Icon.ITEM, c.item, c.nbt), pickItem);
         TextInput count = intField(c.count, 1, ItemCost.MAX_COUNT, Section.LEVELS, v -> c.count = v);
         count.tip(Component.translatable("skill_atlas.ui.field.item_count"));
-        Button pick = new Button(Component.translatable("skill_atlas.ui.pick"), pickItem);
         Button rm = Button.icon(Sprites.TRASH, Component.translatable("skill_atlas.ui.editor.remove_item"), () -> {
             lv.items.remove(c);
             touch(Section.LEVELS);
             rebuild();
         });
-        f.cells(Component.translatable("skill_atlas.ui.editor.item", j + 1), new float[]{1.2F, 5, 1.8F, 2, 1}, preview, id, count, pick, rm);
-        TextInput nbt = text(c.nbt, ItemCost.MAX_NBT, Section.LEVELS, v -> c.nbt = v.trim());
-        nbt.placeholder(Component.translatable("skill_atlas.ui.field.item_nbt.placeholder"));
-        nbt.valid = v -> v.isBlank() || validNbt(v);
-        f.row(Component.translatable("skill_atlas.ui.field.nbt"), nbt);
+        f.cells(Component.translatable("skill_atlas.ui.editor.item", j + 1), new float[]{8.2F, 1.8F, 1}, slot, count, rm);
     }
 
     private void rewardCard(Form f, SkillLevel lv, int j) {

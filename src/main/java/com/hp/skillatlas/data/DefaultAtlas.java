@@ -44,19 +44,24 @@ public final class DefaultAtlas {
                 new ItemCost("minecraft:bone", 24, ""), new ItemCost("minecraft:rabbit_foot", 2, ""), new ItemCost("minecraft:emerald", 16, ""));
 
         SkillNode haste = node("haste", "mining", "minecraft:golden_pickaxe", 0, 0);
-        haste.levels.add(new SkillLevel(1, Reward.effect("minecraft:haste", 0, 60, 20)));
-        haste.levels.add(new SkillLevel(2, Reward.effect("minecraft:haste", 1, 60, 20)));
+        haste.levels.add(new SkillLevel(1, Reward.attribute("skill_atlas:mining_speed", 10.0D, RewardOperation.ADD)));
+        haste.levels.add(new SkillLevel(2, Reward.attribute("skill_atlas:mining_speed", 20.0D, RewardOperation.ADD)));
         d.nodes.put(haste.id, haste);
 
-        SkillNode vision = node("night_vision", "mining", "minecraft:ender_eye", 64, -32);
+        SkillNode vision = node("night_vision", "mining", "minecraft:ender_eye", -64, -48);
         vision.prerequisites.add(new Prerequisite("haste", true));
-        vision.levels.add(new SkillLevel(1, Reward.effect("minecraft:night_vision", 0, 400, 100)));
+        vision.levels.add(new SkillLevel(4, Reward.effect("minecraft:night_vision", 0, 400, 100)));
+        vision.levels.get(0).items.add(new ItemCost("minecraft:golden_carrot", 32, ""));
         d.nodes.put(vision.id, vision);
 
-        SkillNode luck = node("fortune", "mining", "minecraft:emerald", 64, 32);
+        SkillNode luck = node("fortune", "mining", "minecraft:emerald", 64, -48);
         luck.prerequisites.add(new Prerequisite("haste", true));
-        luck.levels.add(new SkillLevel(2, Reward.attribute("minecraft:generic.luck", 1.0D, RewardOperation.ADD)));
-        luck.levels.get(0).items.add(new ItemCost("minecraft:emerald", 4, ""));
+        luck.levels.add(new SkillLevel(4, Reward.attribute("skill_atlas:fortune", 1.0D, RewardOperation.ADD)));
+        luck.levels.add(new SkillLevel(8, Reward.attribute("skill_atlas:fortune", 2.0D, RewardOperation.ADD)));
+        luck.levels.add(new SkillLevel(12, Reward.attribute("skill_atlas:fortune", 3.0D, RewardOperation.ADD)));
+        luck.levels.get(0).items.add(new ItemCost("minecraft:emerald", 16, ""));
+        luck.levels.get(1).items.add(new ItemCost("minecraft:diamond", 4, ""));
+        luck.levels.get(2).items.add(new ItemCost("minecraft:nether_star", 1, ""));
         d.nodes.put(luck.id, luck);
         return d;
     }
