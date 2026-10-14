@@ -69,3 +69,7 @@ assets/skill_atlas/textures/gui/atlas.png
 ## 技能图标
 
 技能与分类的图标可以使用物品，也可以使用任意贴图。贴图类型需填写完整路径，例如 `minecraft:textures/item/apple.png` 或 `my_pack:textures/gui/skill/fire.png`，贴图按正方形绘制。服务端只检查路径格式，客户端缺少贴图时显示为紫黑方块。
+
+## 画布背景
+
+默认画布背景为单独的贴图 `assets/skill_atlas/textures/gui/canvas.png`（512 × 512，深炭灰），按比例铺满画布并居中裁剪，尺寸不限，资源包可直接替换。每个分类还可以在编辑分类时单独指定背景贴图，优先于默认背景。

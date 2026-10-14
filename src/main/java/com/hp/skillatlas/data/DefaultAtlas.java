@@ -13,31 +13,18 @@ public final class DefaultAtlas {
 
     public static AtlasDefinition create() {
         AtlasDefinition d = new AtlasDefinition();
-        d.pools.put("combat", new PointPool("combat", "skill_atlas.sample.pool.combat", 0xE0685A, 1));
-        d.pools.put("mining", new PointPool("mining", "skill_atlas.sample.pool.mining", 0x6FB7E8, 1));
+        PointPool combat = new PointPool("combat", "skill_atlas.sample.pool.combat", 0xE0685A, 1);
+        combat.method = RuleType.KILL;
+        combat.hostile = true;
+        combat.count = 10;
+        d.pools.put(combat.id, combat);
+        PointPool mining = new PointPool("mining", "skill_atlas.sample.pool.mining", 0x6FB7E8, 1);
+        mining.method = RuleType.MINE;
+        mining.targets.add("#forge:ores");
+        mining.count = 8;
+        d.pools.put(mining.id, mining);
         d.categories.put("combat", new Category("combat", "skill_atlas.sample.category.combat", Icon.item("minecraft:iron_sword"), "combat"));
         d.categories.put("mining", new Category("mining", "skill_atlas.sample.category.mining", Icon.item("minecraft:iron_pickaxe"), "mining"));
-
-        PointRule kill = new PointRule();
-        kill.id = "kill_monsters";
-        kill.name = "skill_atlas.sample.rule.kill";
-        kill.description = "skill_atlas.sample.rule.kill.desc";
-        kill.type = RuleType.KILL;
-        kill.count = 10;
-        kill.points = 1;
-        kill.pool = "combat";
-        d.rules.put(kill.id, kill);
-
-        PointRule mine = new PointRule();
-        mine.id = "mine_ores";
-        mine.name = "skill_atlas.sample.rule.mine";
-        mine.description = "skill_atlas.sample.rule.mine.desc";
-        mine.type = RuleType.MINE;
-        mine.targets.add("#forge:ores");
-        mine.count = 8;
-        mine.points = 1;
-        mine.pool = "mining";
-        d.rules.put(mine.id, mine);
 
         branch(d, "health", "minecraft:apple", "minecraft:generic.max_health", RewardOperation.ADD, new double[]{1.0D, 4.0D, 6.0D}, -1, -1, false,
                 new ItemCost("minecraft:golden_carrot", 8, ""), new ItemCost("minecraft:golden_apple", 2, ""), new ItemCost("minecraft:heart_of_the_sea", 1, ""));

@@ -19,7 +19,6 @@ public final class EditOps {
     public static final class Changes {
         public final Set<String> nodes = new LinkedHashSet<>();
         public final Set<String> shrunk = new HashSet<>();
-        public final Set<String> rules = new HashSet<>();
         public final Set<String> categories = new HashSet<>();
         public final Set<String> pools = new HashSet<>();
         public boolean meta;
@@ -142,27 +141,7 @@ public final class EditOps {
                             throw new AtlasException("skill_atlas.error.pool_in_use", id);
                         }
                     }
-                    for (PointRule r : d.rules.values()) {
-                        if (r.pool.equals(id)) {
-                            throw new AtlasException("skill_atlas.error.pool_in_use", id);
-                        }
-                    }
                     if (d.pools.remove(id) != null) {
-                        c.meta = true;
-                    }
-                }
-                case "rule" -> {
-                    PointRule r = PointRule.fromJson(o.get("rule"));
-                    boolean create = Json.bool(o, "create", false);
-                    if (create && d.rules.containsKey(r.id)) {
-                        throw new AtlasException("skill_atlas.error.duplicate", r.id);
-                    }
-                    d.rules.put(r.id, r);
-                    c.rules.add(r.id);
-                    c.meta = true;
-                }
-                case "delete_rule" -> {
-                    if (d.rules.remove(Json.id(o, "id")) != null) {
                         c.meta = true;
                     }
                 }
@@ -191,7 +170,6 @@ public final class EditOps {
         if (c.meta) {
             o.add("pools", d.poolsJson());
             o.add("categories", d.categoriesJson());
-            o.add("rules", d.rulesJson());
         }
         return o;
     }
@@ -282,14 +260,6 @@ public final class EditOps {
         o.addProperty("op", "pool");
         o.addProperty("create", create);
         o.add("pool", p.toJson());
-        return o;
-    }
-
-    public static JsonObject ruleOp(PointRule r, boolean create) {
-        JsonObject o = new JsonObject();
-        o.addProperty("op", "rule");
-        o.addProperty("create", create);
-        o.add("rule", r.toJson());
         return o;
     }
 

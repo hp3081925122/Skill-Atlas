@@ -9,7 +9,6 @@ import com.hp.skillatlas.data.Icon;
 import com.hp.skillatlas.data.ItemCost;
 import com.hp.skillatlas.data.Json;
 import com.hp.skillatlas.data.PointPool;
-import com.hp.skillatlas.data.PointRule;
 import com.hp.skillatlas.data.Reward;
 import com.hp.skillatlas.data.RewardOperation;
 import com.hp.skillatlas.data.RuleType;
@@ -223,20 +222,41 @@ public final class Names {
         return Component.translatable("skill_atlas.rule_type." + t.key);
     }
 
-    public static MutableComponent rule(PointRule r) {
-        if (!r.name.isEmpty()) {
-            return Texts.component(r.name);
-        }
+    public static MutableComponent earn(PointPool p) {
         MutableComponent targets;
-        if (r.targets.isEmpty()) {
-            targets = Component.translatable("skill_atlas.ui.any");
+        if (p.targets.isEmpty()) {
+            if (p.hostileOnly()) {
+                targets = Component.translatable("skill_atlas.ui.any_hostile");
+            } else {
+                targets = Component.translatable("skill_atlas.ui.any");
+            }
         } else {
-            targets = target(r.type, r.targets.get(0));
-            if (r.targets.size() > 1) {
-                targets = Component.translatable("skill_atlas.ui.and_more", targets, r.targets.size() - 1);
+            String first = p.targets.get(0);
+            String tagKey = "skill_atlas.tag." + first.substring(1).replace(':', '.').replace('/', '.');
+            if (first.startsWith("#") && I18n.exists(tagKey)) {
+                targets = Component.translatable(tagKey);
+            } else {
+                targets = target(p.method, first);
+            }
+            if (p.targets.size() > 1) {
+                targets = Component.translatable("skill_atlas.ui.and_more", targets, p.targets.size() - 1);
+            }
+            if (p.hostileOnly()) {
+                targets = Component.translatable("skill_atlas.ui.hostile_of", targets);
             }
         }
-        return Component.translatable("skill_atlas.rule_desc." + r.type.key, targets, r.count);
+        return Component.translatable("skill_atlas.rule_desc." + p.method.key, targets, p.count);
+    }
+
+    public static MutableComponent earnProgress(PointPool p, long counter, long awarded) {
+        if (p.limit > 0 && awarded >= p.limit) {
+            return Component.translatable("skill_atlas.ui.points.rule_done").withStyle(s -> s.withColor(0xE0685A));
+        }
+        MutableComponent line = Component.translatable("skill_atlas.ui.category_rule_progress", counter, p.count).withStyle(s -> s.withColor(0x7FD8C8));
+        if (p.limit > 0) {
+            line = line.append(Component.literal("  ")).append(Component.translatable("skill_atlas.ui.points.rule_limit", awarded, p.limit).withStyle(s -> s.withColor(0x8A93A8)));
+        }
+        return line;
     }
 
     public static MutableComponent state(AtlasLogic.State s) {

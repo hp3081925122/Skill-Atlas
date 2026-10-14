@@ -226,16 +226,20 @@ public final class Gfx {
     }
 
     public static void texture(ResourceLocation tex, float x, float y, float w, float h, int argb) {
+        texture(tex, x, y, w, h, 0, 0, 1, 1, argb);
+    }
+
+    public static void texture(ResourceLocation tex, float x, float y, float w, float h, float u0, float v0, float u1, float v1, int argb) {
         ensure(TEX, tex);
         Matrix4f m = g.pose().last().pose();
         int a = argb >>> 24;
         int r = (argb >> 16) & 0xFF;
         int gr = (argb >> 8) & 0xFF;
         int b = argb & 0xFF;
-        BUF.vertex(m, x, y, 0).color(r, gr, b, a).uv(0, 0).endVertex();
-        BUF.vertex(m, x, y + h, 0).color(r, gr, b, a).uv(0, 1).endVertex();
-        BUF.vertex(m, x + w, y + h, 0).color(r, gr, b, a).uv(1, 1).endVertex();
-        BUF.vertex(m, x + w, y, 0).color(r, gr, b, a).uv(1, 0).endVertex();
+        BUF.vertex(m, x, y, 0).color(r, gr, b, a).uv(u0, v0).endVertex();
+        BUF.vertex(m, x, y + h, 0).color(r, gr, b, a).uv(u0, v1).endVertex();
+        BUF.vertex(m, x + w, y + h, 0).color(r, gr, b, a).uv(u1, v1).endVertex();
+        BUF.vertex(m, x + w, y, 0).color(r, gr, b, a).uv(u1, v0).endVertex();
     }
 
     public static void item(ItemStack stack, float x, float y, float size) {

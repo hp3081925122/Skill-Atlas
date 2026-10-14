@@ -27,6 +27,7 @@ public final class MessageDialog extends Dialog {
         String[][] keys = {
                 {"browse", "4"},
                 {"edit", "7"},
+                {"keys", "13"},
                 {"nodes", "6"},
                 {"points", "3"}
         };

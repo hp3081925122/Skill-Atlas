@@ -1,6 +1,7 @@
 package com.hp.skillatlas.client.screen;
 
 import com.hp.skillatlas.AtlasConfig;
+import com.hp.skillatlas.SkillAtlas;
 import com.hp.skillatlas.client.ClientAtlas;
 import com.hp.skillatlas.client.Icons;
 import com.hp.skillatlas.client.Names;
@@ -13,20 +14,28 @@ import com.hp.skillatlas.client.ui.Ui;
 import com.hp.skillatlas.client.ui.Widget;
 import com.hp.skillatlas.data.AtlasDefinition;
 import com.hp.skillatlas.data.AtlasLogic;
+import com.hp.skillatlas.data.Category;
 import com.hp.skillatlas.data.PlayerProgress;
 import com.hp.skillatlas.data.Prerequisite;
 import com.hp.skillatlas.data.SkillNode;
+import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.Util;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
 import org.lwjgl.glfw.GLFW;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public final class CanvasView extends Widget {
@@ -44,6 +53,7 @@ public final class CanvasView extends Widget {
     public static final float MAX_ZOOM = 3.0F;
     public static final int SNAP = 8;
     private static final float GRID = 32;
+    private static final ResourceLocation DEFAULT_BACKGROUND = SkillAtlas.id("textures/gui/canvas.png");
 
     private final MainLayer main;
     private Mode mode = Mode.NONE;
@@ -57,6 +67,7 @@ public final class CanvasView extends Widget {
     private boolean wasSelected;
     private boolean additive;
     private final Map<String, int[]> origins = new LinkedHashMap<>();
+    private final Map<ResourceLocation, int[]> textureSizes = new HashMap<>();
     private boolean moved;
     private String lastClickNode;
     private long lastClickTime;
@@ -292,7 +303,10 @@ public final class CanvasView extends Widget {
         }
         Gfx.sprite(Sprites.INSET, x, y, w, h);
         Gfx.pushClip(x + 1, y + 1, w - 2, h - 2);
-        renderGrid();
+        renderBackground();
+        if (ClientAtlas.editMode) {
+            renderGrid();
+        }
         List<SkillNode> list = nodes();
         hoverLink = null;
         if (mode == Mode.NONE && hovered() && nodeAt(Ui.mouseX, Ui.mouseY) == null) {
@@ -315,6 +329,67 @@ public final class CanvasView extends Widget {
             Gfx.textCentered(Component.translatable(key), cx(), cy() - 4, Theme.MUTED);
         }
         Gfx.popClip();
+    }
+
+    private int[] textureSize(ResourceLocation tex) {
+        return textureSizes.computeIfAbsent(tex, k -> {
+            Optional<Resource> res = Minecraft.getInstance().getResourceManager().getResource(k);
+            if (res.isEmpty()) {
+                SkillAtlas.LOGGER.warn("Skill atlas background texture not found: {}", k);
+                return new int[]{0, 0};
+            }
+            try (InputStream in = res.get().open(); NativeImage img = NativeImage.read(in)) {
+                return new int[]{img.getWidth(), img.getHeight()};
+            } catch (IOException e) {
+                SkillAtlas.LOGGER.warn("Failed to read skill atlas background texture {}: {}", k, e.getMessage());
+                return new int[]{0, 0};
+            }
+        });
+    }
+
+    private void renderBackground() {
+        ResourceLocation tex = DEFAULT_BACKGROUND;
+        boolean tile = false;
+        Category c = ClientAtlas.definition.categories.get(ClientAtlas.category);
+        if (c != null && !c.background.isEmpty()) {
+            ResourceLocation custom = ResourceLocation.tryParse(c.background);
+            if (custom != null && textureSize(custom)[0] > 0) {
+                tex = custom;
+                tile = c.tile;
+            }
+        }
+        int[] size = textureSize(tex);
+        if (size[0] <= 0 || size[1] <= 0) {
+            return;
+        }
+        float bx = x + 1;
+        float by = y + 1;
+        float bw = w - 2;
+        float bh = h - 2;
+        if (tile) {
+            float tw = size[0] * 2 * zoom();
+            float th = size[1] * 2 * zoom();
+            while (tw < 16 || th < 16) {
+                tw *= 2;
+                th *= 2;
+            }
+            float ox = sx(0);
+            float oy = sy(0);
+            float startX = ox - (float) Math.ceil((ox - bx) / tw) * tw;
+            float startY = oy - (float) Math.ceil((oy - by) / th) * th;
+            for (float tx = startX; tx < bx + bw; tx += tw) {
+                for (float ty = startY; ty < by + bh; ty += th) {
+                    Gfx.texture(tex, tx, ty, tw, th, 0xFFFFFFFF);
+                }
+            }
+            return;
+        }
+        float scale = Math.max(bw / size[0], bh / size[1]);
+        float uw = bw / scale / size[0];
+        float vh = bh / scale / size[1];
+        float u0 = (1 - uw) / 2;
+        float v0 = (1 - vh) / 2;
+        Gfx.texture(tex, bx, by, bw, bh, u0, v0, u0 + uw, v0 + vh, 0xFFFFFFFF);
     }
 
     private void renderGrid() {
@@ -792,7 +867,7 @@ public final class CanvasView extends Widget {
             }
             case CLICK_PENDING -> {
                 if (pressNode != null && !dragged) {
-                    if (Screen.hasShiftDown()) {
+                    if (Screen.hasShiftDown() || Screen.hasControlDown()) {
                         ClientAtlas.learn(pressNode.id);
                     } else {
                         main.stack.push(new InfoDialog(pressNode.id));
@@ -923,6 +998,10 @@ public final class CanvasView extends Widget {
         List<SkillNode> sel = selectedNodes();
         if (ctrl && key == GLFW.GLFW_KEY_A) {
             selectAll();
+            return true;
+        }
+        if (ctrl && key == GLFW.GLFW_KEY_D) {
+            ClientAtlas.SELECTION.clear();
             return true;
         }
         if (ctrl && key == GLFW.GLFW_KEY_C) {

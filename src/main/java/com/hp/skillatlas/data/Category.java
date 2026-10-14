@@ -8,6 +8,8 @@ public final class Category {
     public String name = "";
     public Icon icon = Icon.item("minecraft:book");
     public String pool = "";
+    public String background = "";
+    public boolean tile;
 
     public Category() {
     }
@@ -20,7 +22,10 @@ public final class Category {
     }
 
     public Category copy() {
-        return new Category(id, name, icon.copy(), pool);
+        Category c = new Category(id, name, icon.copy(), pool);
+        c.background = background;
+        c.tile = tile;
+        return c;
     }
 
     public JsonObject toJson() {
@@ -29,6 +34,8 @@ public final class Category {
         o.addProperty("name", name);
         o.add("icon", icon.toJson());
         o.addProperty("pool", pool);
+        o.addProperty("background", background);
+        o.addProperty("tile", tile);
         return o;
     }
 
@@ -39,6 +46,12 @@ public final class Category {
         c.name = Json.string(o, "name", "", 128);
         c.icon = Icon.fromJson(o.get("icon"));
         c.pool = Json.id(o, "pool");
+        String bg = Json.string(o, "background", "", 256).trim();
+        if (!bg.isEmpty()) {
+            bg = Json.resource(bg, "background");
+        }
+        c.background = bg;
+        c.tile = Json.bool(o, "tile", false);
         return c;
     }
 }

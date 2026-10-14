@@ -1,10 +1,10 @@
 package com.hp.skillatlas.server;
 
 import com.hp.skillatlas.AtlasConfig;
+import com.hp.skillatlas.SkillAtlas;
 import com.hp.skillatlas.data.AtlasDefinition;
 import com.hp.skillatlas.data.PlayerProgress;
 import com.hp.skillatlas.data.PointPool;
-import com.hp.skillatlas.data.PointRule;
 import com.hp.skillatlas.data.RuleType;
 import com.hp.skillatlas.data.Texts;
 import net.minecraft.core.registries.Registries;
@@ -13,6 +13,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.util.FakePlayer;
@@ -30,7 +32,7 @@ import java.util.function.Predicate;
 public final class PointTracker {
     public static final String BEST_LEVEL = "#best_level";
 
-    private record Compiled(PointRule rule, Set<ResourceLocation> ids, List<ResourceLocation> tags) {
+    private record Compiled(PointPool pool, Set<ResourceLocation> ids, List<ResourceLocation> tags) {
         boolean matches(ResourceLocation id, Predicate<ResourceLocation> tag) {
             if (ids.isEmpty() && tags.isEmpty()) {
                 return true;
@@ -54,17 +56,17 @@ public final class PointTracker {
 
     public static void rebuild(AtlasDefinition d) {
         RULES.clear();
-        for (PointRule r : d.rules.values()) {
+        for (PointPool p : d.pools.values()) {
             Set<ResourceLocation> ids = new HashSet<>();
             List<ResourceLocation> tags = new ArrayList<>();
-            for (String t : r.targets) {
+            for (String t : p.targets) {
                 if (t.startsWith("#")) {
                     tags.add(new ResourceLocation(t.substring(1)));
                 } else {
                     ids.add(new ResourceLocation(t));
                 }
             }
-            RULES.computeIfAbsent(r.type, k -> new ArrayList<>()).add(new Compiled(r, ids, tags));
+            RULES.computeIfAbsent(p.method, k -> new ArrayList<>()).add(new Compiled(p, ids, tags));
         }
     }
 
@@ -82,14 +84,20 @@ public final class PointTracker {
         return true;
     }
 
-    public static void kill(ServerPlayer player, EntityType<?> type) {
+    public static void kill(ServerPlayer player, LivingEntity victim) {
         if (rules(RuleType.KILL).isEmpty() || !counts(player)) {
             return;
         }
+        EntityType<?> type = victim.getType();
         ResourceLocation id = ForgeRegistries.ENTITY_TYPES.getKey(type);
+        boolean hostile = victim instanceof Enemy;
+        SkillAtlas.LOGGER.debug("Kill tracked: player={}, entity={}, hostile={}", player.getGameProfile().getName(), id, hostile);
         for (Compiled c : rules(RuleType.KILL)) {
+            if (c.pool.hostileOnly() && !hostile) {
+                continue;
+            }
             if (c.matches(id, t -> type.is(TagKey.create(Registries.ENTITY_TYPE, t)))) {
-                progress(player, c.rule, 1);
+                progress(player, c.pool, 1);
             }
         }
     }
@@ -101,7 +109,7 @@ public final class PointTracker {
         ResourceLocation id = ForgeRegistries.BLOCKS.getKey(state.getBlock());
         for (Compiled c : rules(RuleType.MINE)) {
             if (c.matches(id, t -> state.is(TagKey.create(Registries.BLOCK, t)))) {
-                progress(player, c.rule, 1);
+                progress(player, c.pool, 1);
             }
         }
     }
@@ -113,7 +121,7 @@ public final class PointTracker {
         ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
         for (Compiled c : rules(type)) {
             if (c.matches(id, t -> stack.is(TagKey.create(Registries.ITEM, t)))) {
-                progress(player, c.rule, stack.getCount());
+                progress(player, c.pool, stack.getCount());
             }
         }
     }
@@ -125,10 +133,10 @@ public final class PointTracker {
         for (Compiled c : rules(RuleType.ADVANCEMENT)) {
             if (c.ids.isEmpty()) {
                 if (displayed) {
-                    progress(player, c.rule, 1);
+                    progress(player, c.pool, 1);
                 }
             } else if (c.ids.contains(id)) {
-                progress(player, c.rule, 1);
+                progress(player, c.pool, 1);
             }
         }
     }
@@ -141,7 +149,7 @@ public final class PointTracker {
         }
         if (playtime) {
             for (Compiled c : rules(RuleType.PLAYTIME)) {
-                progress(player, c.rule, 1);
+                progress(player, c.pool, 1);
             }
         }
         if (level) {
@@ -151,39 +159,33 @@ public final class PointTracker {
                 p.setCounter(BEST_LEVEL, player.experienceLevel);
                 AtlasServer.data().setDirty();
                 for (Compiled c : rules(RuleType.LEVEL)) {
-                    progress(player, c.rule, player.experienceLevel - best);
+                    progress(player, c.pool, player.experienceLevel - best);
                 }
             }
         }
     }
 
-    private static void progress(ServerPlayer player, PointRule rule, long amount) {
+    private static void progress(ServerPlayer player, PointPool pool, long amount) {
         PlayerProgress p = AtlasServer.progress(player);
-        long awarded = p.awarded(rule.id);
-        if (rule.limit > 0 && awarded >= rule.limit) {
+        long awarded = p.awarded(pool.id);
+        if (pool.limit > 0 && awarded >= pool.limit) {
             return;
         }
-        long total = p.counter(rule.id) + amount;
-        long gain = (total / rule.count) * rule.points;
-        p.setCounter(rule.id, total % rule.count);
-        if (rule.limit > 0) {
-            gain = Math.min(gain, rule.limit - awarded);
+        long total = p.counter(pool.id) + amount;
+        long gain = (total / pool.count) * pool.points;
+        p.setCounter(pool.id, total % pool.count);
+        if (pool.limit > 0) {
+            gain = Math.min(gain, pool.limit - awarded);
         }
         AtlasServer.data().setDirty();
         AtlasServer.markSync(player);
         if (gain <= 0) {
             return;
         }
-        p.addPoints(rule.pool, gain);
-        p.addAwarded(rule.id, gain);
+        p.addPoints(pool.id, gain);
+        p.addAwarded(pool.id, gain);
         if (AtlasConfig.NOTIFY_POINTS.get()) {
-            PointPool pool = AtlasServer.definition().pools.get(rule.pool);
-            Component name;
-            if (pool == null) {
-                name = Component.literal(rule.pool);
-            } else {
-                name = Texts.component(pool.name, pool.id).withStyle(s -> s.withColor(pool.color));
-            }
+            Component name = Texts.component(pool.name, pool.id).withStyle(s -> s.withColor(pool.color));
             player.displayClientMessage(Component.translatable("skill_atlas.message.points_gained", gain, name), true);
         }
     }
