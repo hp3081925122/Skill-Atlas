@@ -174,6 +174,24 @@ public final class EditOps {
                         c.meta = true;
                     }
                 }
+                case "texts" -> {
+                    for (Map.Entry<String, JsonElement> t : Json.object(o.get("texts"), "texts").entrySet()) {
+                        String key = t.getKey();
+                        if (!AtlasTexts.isKey(key) || key.length() > AtlasTexts.MAX_KEY) {
+                            throw new AtlasException("skill_atlas.error.bad_op", op);
+                        }
+                        AtlasTexts parsed = new AtlasTexts();
+                        for (Map.Entry<String, JsonElement> l : Json.object(t.getValue(), key).entrySet()) {
+                            if (d.texts.langs.containsKey(l.getKey()) || d.texts.langs.size() < AtlasTexts.MAX_LANGS) {
+                                JsonObject one = new JsonObject();
+                                one.add(key, l.getValue());
+                                parsed.readLang(l.getKey(), one);
+                            }
+                        }
+                        d.texts.set(key, parsed.entries(key));
+                        c.texts.add(key);
+                    }
+                }
                 default -> throw new AtlasException("skill_atlas.error.bad_op", op);
             }
         }
@@ -344,6 +362,17 @@ public final class EditOps {
         o.addProperty("op", "pool");
         o.addProperty("create", create);
         o.add("pool", p.toJson());
+        return o;
+    }
+
+    public static JsonObject textsOp(AtlasTexts source, Collection<String> keys) {
+        JsonObject t = new JsonObject();
+        for (String key : keys) {
+            t.add(key, AtlasTexts.langJson(source.entries(key)));
+        }
+        JsonObject o = new JsonObject();
+        o.addProperty("op", "texts");
+        o.add("texts", t);
         return o;
     }
 

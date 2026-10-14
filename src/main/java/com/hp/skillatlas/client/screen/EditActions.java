@@ -123,17 +123,28 @@ public final class EditActions {
     }
 
     public static void link(MainLayer main, List<SkillNode> parents, SkillNode target) {
-        SkillNode copy = target.copy();
+        link(main, parents, List.of(target));
+    }
+
+    public static void link(MainLayer main, List<SkillNode> parents, List<SkillNode> children) {
+        JsonArray ops = new JsonArray();
         int added = 0;
         Component problem = null;
-        for (SkillNode parent : parents) {
-            Component p = linkProblem(parent, copy);
-            if (p != null) {
-                problem = p;
-                continue;
+        for (SkillNode child : children) {
+            SkillNode copy = child.copy();
+            int before = added;
+            for (SkillNode parent : parents) {
+                Component p = linkProblem(parent, copy);
+                if (p != null) {
+                    problem = p;
+                    continue;
+                }
+                copy.prerequisites.add(new Prerequisite(parent.id, true));
+                added++;
             }
-            copy.prerequisites.add(new Prerequisite(parent.id, true));
-            added++;
+            if (added > before) {
+                ops.add(EditOps.nodeOp(copy, false));
+            }
         }
         if (added == 0) {
             if (problem != null) {
@@ -141,10 +152,58 @@ public final class EditActions {
             }
             return;
         }
-        JsonArray ops = new JsonArray();
-        ops.add(EditOps.nodeOp(copy, false));
         int count = added;
         send(main, ops, () -> main.status(Component.translatable("skill_atlas.ui.linked", count), Theme.TEAL));
+    }
+
+    public static boolean linked(List<SkillNode> parents, List<SkillNode> children) {
+        for (SkillNode child : children) {
+            for (SkillNode parent : parents) {
+                if (child.prerequisite(parent.id) != null) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static void unlink(MainLayer main, List<SkillNode> parents, List<SkillNode> children) {
+        Set<String> ids = new HashSet<>();
+        for (SkillNode parent : parents) {
+            ids.add(parent.id);
+        }
+        JsonArray ops = new JsonArray();
+        for (SkillNode child : children) {
+            SkillNode copy = child.copy();
+            if (copy.prerequisites.removeIf(p -> ids.contains(p.node))) {
+                ops.add(EditOps.nodeOp(copy, false));
+            }
+        }
+        if (!ops.isEmpty()) {
+            send(main, ops, () -> main.status(Component.translatable("skill_atlas.ui.unlinked"), Theme.MUTED));
+        }
+    }
+
+    public static void copyId(MainLayer main, SkillNode n) {
+        Minecraft.getInstance().keyboardHandler.setClipboard(n.id);
+        main.status(Component.translatable("skill_atlas.ui.copied_id", n.id), Theme.TEAL);
+    }
+
+    public static void undo(MainLayer main) {
+        if (ClientAtlas.locked) {
+            main.error(Component.translatable("skill_atlas.ui.locked"));
+            return;
+        }
+        boolean started = ClientAtlas.undo(r -> {
+            if (r.ok()) {
+                main.status(Component.translatable("skill_atlas.ui.undone"), Theme.TEAL);
+            } else {
+                main.error(Names.error(r.key(), r.args()));
+            }
+        });
+        if (!started) {
+            main.status(Component.translatable("skill_atlas.ui.nothing_to_undo"), Theme.MUTED);
+        }
     }
 
     public static void setLine(MainLayer main, SkillNode child, String parentId, boolean line) {
@@ -198,12 +257,25 @@ public final class EditActions {
     }
 
     public static void delete(MainLayer main, List<SkillNode> nodes) {
+        delete(main, nodes, true);
+    }
+
+    public static void delete(MainLayer main, List<SkillNode> nodes, boolean confirm) {
         if (nodes.isEmpty()) {
             return;
         }
         List<String> ids = new ArrayList<>();
         for (SkillNode n : nodes) {
             ids.add(n.id);
+        }
+        if (!confirm) {
+            JsonArray ops = new JsonArray();
+            ops.add(EditOps.deleteNodesOp(ids));
+            send(main, ops, () -> {
+                ids.forEach(ClientAtlas.SELECTION::remove);
+                main.status(Component.translatable("skill_atlas.ui.deleted", ids.size()), Theme.MUTED);
+            });
+            return;
         }
         Component message = Component.translatable("skill_atlas.ui.confirm_delete", ids.size());
         if (ids.size() == 1) {
@@ -302,6 +374,10 @@ public final class EditActions {
     }
 
     public static void paste(MainLayer main, int wx, int wy) {
+        paste(main, wx, wy, true);
+    }
+
+    public static void paste(MainLayer main, int wx, int wy, boolean external) {
         AtlasDefinition d = ClientAtlas.definition;
         if (!d.categories.containsKey(ClientAtlas.category)) {
             main.error(Component.translatable("skill_atlas.ui.need_category"));
@@ -348,7 +424,7 @@ public final class EditActions {
                 String mapped = ids.get(p.node);
                 if (mapped != null) {
                     c.prerequisites.add(new Prerequisite(mapped, p.line));
-                } else if (d.nodes.containsKey(p.node)) {
+                } else if (external && d.nodes.containsKey(p.node)) {
                     c.prerequisites.add(p.copy());
                 }
             }

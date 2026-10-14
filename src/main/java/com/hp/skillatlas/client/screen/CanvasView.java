@@ -18,6 +18,7 @@ import com.hp.skillatlas.data.Category;
 import com.hp.skillatlas.data.PlayerProgress;
 import com.hp.skillatlas.data.Prerequisite;
 import com.hp.skillatlas.data.SkillNode;
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -173,13 +174,26 @@ public final class CanvasView extends Widget {
     }
 
     public void fit() {
+        fit(true);
+    }
+
+    public int[] cursor() {
+        if (!hovered()) {
+            return null;
+        }
+        return new int[]{(int) Math.round(wx(Ui.mouseX)), (int) Math.round(wy(Ui.mouseY))};
+    }
+
+    private void fit(boolean zoom) {
         ClientAtlas.View v = view();
         v.initialized = true;
         List<SkillNode> list = nodes();
         if (list.isEmpty() || w <= 0 || h <= 0) {
             v.panX = 0;
             v.panY = 0;
-            v.zoom = 1.0F;
+            if (zoom) {
+                v.zoom = 1.0F;
+            }
             return;
         }
         float minX = Float.MAX_VALUE;
@@ -195,6 +209,9 @@ public final class CanvasView extends Widget {
         }
         v.panX = (minX + maxX) / 2.0F;
         v.panY = (minY + maxY) / 2.0F;
+        if (!zoom) {
+            return;
+        }
         float zx = (w - 40) / Math.max(1, maxX - minX);
         float zy = (h - 40) / Math.max(1, maxY - minY);
         v.zoom = Math.max(MIN_ZOOM, Math.min(1.5F, Math.min(zx, zy)));
@@ -939,9 +956,15 @@ public final class CanvasView extends Widget {
             menu.add(Component.translatable(majorKey), Sprites.STAR, () -> EditActions.setMajor(main, targets, setMajor));
             menu.add(Component.translatable(hiddenKey), Sprites.EYE_OFF, () -> EditActions.setHidden(main, targets, setHidden));
             if (!others.isEmpty()) {
-                menu.add(Component.translatable("skill_atlas.ui.menu.link_selected", others.size()), Sprites.LINK, () -> EditActions.link(main, others, n));
+                List<SkillNode> self = List.of(n);
+                menu.separator();
+                menu.add(Component.translatable("skill_atlas.ui.menu.link_selected", others.size()), Sprites.LINK, () -> EditActions.link(main, others, self));
+                menu.add(Component.translatable("skill_atlas.ui.menu.link_to_selected", others.size()), Sprites.LINK, () -> EditActions.link(main, self, others));
+                menu.add(Component.translatable("skill_atlas.ui.menu.unlink_selected"), Sprites.TRASH, EditActions.linked(others, self), () -> EditActions.unlink(main, others, self));
+                menu.add(Component.translatable("skill_atlas.ui.menu.unlink_from_selected"), Sprites.TRASH, EditActions.linked(self, others), () -> EditActions.unlink(main, self, others));
             }
             menu.separator();
+            menu.add(Component.translatable("skill_atlas.ui.menu.copy_id"), Sprites.COPY, () -> EditActions.copyId(main, n));
             menu.danger(Component.translatable("skill_atlas.ui.menu.delete", targets.size()), Sprites.TRASH, () -> EditActions.delete(main, targets));
         } else if (pressLink != null) {
             Link link = pressLink;
@@ -957,6 +980,8 @@ public final class CanvasView extends Widget {
             int wyp = snap(wy(my));
             menu.add(Component.translatable("skill_atlas.ui.menu.create"), Sprites.PLUS, !ClientAtlas.definition.categories.isEmpty(), () -> EditActions.create(main, wxp, wyp));
             menu.add(Component.translatable("skill_atlas.ui.menu.paste"), Sprites.PASTE, EditActions.hasClipboard(), () -> EditActions.paste(main, wxp, wyp));
+            menu.add(Component.translatable("skill_atlas.ui.menu.paste_isolated"), Sprites.PASTE, EditActions.hasClipboard(), () -> EditActions.paste(main, wxp, wyp, false));
+            menu.add(Component.translatable("skill_atlas.ui.menu.undo"), Sprites.LEFT, ClientAtlas.canUndo(), () -> EditActions.undo(main));
             menu.separator();
             menu.add(Component.translatable("skill_atlas.ui.menu.select_all"), Sprites.CHECK, !nodes().isEmpty(), this::selectAll);
             menu.add(Component.translatable("skill_atlas.ui.menu.fit"), Sprites.TARGET, this::fit);
@@ -991,10 +1016,39 @@ public final class CanvasView extends Widget {
             zoomAt(cx(), cy(), zoom() / 1.25F);
             return true;
         }
+        boolean ctrl = Screen.hasControlDown();
+        if (key == GLFW.GLFW_KEY_SPACE) {
+            fit(false);
+            return true;
+        }
+        if (!ctrl && (key == GLFW.GLFW_KEY_0 || key == GLFW.GLFW_KEY_KP_0)) {
+            zoomAt(cx(), cy(), 1.0F);
+            return true;
+        }
+        List<String> cats = new ArrayList<>(ClientAtlas.definition.categories.keySet());
+        if (key == GLFW.GLFW_KEY_TAB && !cats.isEmpty()) {
+            int step = 1;
+            if (Screen.hasShiftDown()) {
+                step = -1;
+            }
+            int index = Math.floorMod(cats.indexOf(ClientAtlas.category) + step, cats.size());
+            main.selectCategory(cats.get(index));
+            return true;
+        }
+        if (!ctrl && key >= GLFW.GLFW_KEY_1 && key <= GLFW.GLFW_KEY_9) {
+            int index = key - GLFW.GLFW_KEY_1;
+            if (index < cats.size()) {
+                main.selectCategory(cats.get(index));
+            }
+            return true;
+        }
         if (!ClientAtlas.editMode) {
             return false;
         }
-        boolean ctrl = Screen.hasControlDown();
+        if (ctrl && key == GLFW.GLFW_KEY_Z) {
+            EditActions.undo(main);
+            return true;
+        }
         List<SkillNode> sel = selectedNodes();
         if (ctrl && key == GLFW.GLFW_KEY_A) {
             selectAll();
@@ -1018,12 +1072,12 @@ public final class CanvasView extends Widget {
         }
         if (ctrl && key == GLFW.GLFW_KEY_V) {
             int[] at = pastePoint();
-            EditActions.paste(main, at[0], at[1]);
+            EditActions.paste(main, at[0], at[1], !Screen.hasShiftDown());
             return true;
         }
         if (key == GLFW.GLFW_KEY_DELETE || key == GLFW.GLFW_KEY_BACKSPACE) {
             if (!sel.isEmpty()) {
-                EditActions.delete(main, sel);
+                EditActions.delete(main, sel, !Screen.hasShiftDown());
             }
             return true;
         }
@@ -1068,7 +1122,13 @@ public final class CanvasView extends Widget {
         }
         SkillNode n = nodeAt(mx, my);
         if (n != null) {
-            return NodeTooltip.lines(n);
+            List<Component> lines = NodeTooltip.lines(n);
+            if (ClientAtlas.editMode && InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_F1)) {
+                lines = new ArrayList<>(lines);
+                lines.add(Component.translatable("skill_atlas.ui.debug.id", n.id).withStyle(s -> s.withColor(0x8A93A8)));
+                lines.add(Component.translatable("skill_atlas.ui.debug.pos", n.x, n.y).withStyle(s -> s.withColor(0x8A93A8)));
+            }
+            return lines;
         }
         if (hoverLink != null) {
             List<Component> out = new ArrayList<>();
