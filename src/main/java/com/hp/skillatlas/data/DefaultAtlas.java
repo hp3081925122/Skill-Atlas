@@ -21,6 +21,7 @@ public final class DefaultAtlas {
         PointRule kill = new PointRule();
         kill.id = "kill_monsters";
         kill.name = "skill_atlas.sample.rule.kill";
+        kill.description = "skill_atlas.sample.rule.kill.desc";
         kill.type = RuleType.KILL;
         kill.count = 10;
         kill.points = 1;
@@ -30,6 +31,7 @@ public final class DefaultAtlas {
         PointRule mine = new PointRule();
         mine.id = "mine_ores";
         mine.name = "skill_atlas.sample.rule.mine";
+        mine.description = "skill_atlas.sample.rule.mine.desc";
         mine.type = RuleType.MINE;
         mine.targets.add("#forge:ores");
         mine.count = 8;

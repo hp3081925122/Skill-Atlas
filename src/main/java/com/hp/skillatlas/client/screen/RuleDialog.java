@@ -124,6 +124,11 @@ public final class RuleDialog extends Dialog {
         TextInput name = new TextInput(r.name).max(128).placeholder(Component.translatable("skill_atlas.ui.rule.name.placeholder"));
         name.onChange = s -> r.name = s;
         inputs.add(f.row(Component.translatable("skill_atlas.ui.field.name"), name));
+        TextInput description = new TextInput(r.description).max(PointRule.MAX_DESCRIPTION).multiline().placeholder(Component.translatable("skill_atlas.ui.rule.description.placeholder"));
+        description.h = 40;
+        description.onChange = s -> r.description = s;
+        f.row(Component.translatable("skill_atlas.ui.field.tooltip"), description);
+        NodeEditorDialog.hint(f, Component.translatable("skill_atlas.ui.editor.text_hint"), Theme.DIM);
         CycleButton<RuleType> type = new CycleButton<>(List.of(RuleType.values()), r.type, Names::ruleType, v -> {
             if (v.targets != r.type.targets) {
                 r.targets.clear();

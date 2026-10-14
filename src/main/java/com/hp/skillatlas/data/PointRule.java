@@ -9,9 +9,11 @@ import java.util.List;
 
 public final class PointRule {
     public static final int MAX_TARGETS = 64;
+    public static final int MAX_DESCRIPTION = 1000;
 
     public String id = "";
     public String name = "";
+    public String description = "";
     public RuleType type = RuleType.KILL;
     public final List<String> targets = new ArrayList<>();
     public int count = 1;
@@ -23,6 +25,7 @@ public final class PointRule {
         PointRule r = new PointRule();
         r.id = id;
         r.name = name;
+        r.description = description;
         r.type = type;
         r.targets.addAll(targets);
         r.count = count;
@@ -36,6 +39,7 @@ public final class PointRule {
         JsonObject o = new JsonObject();
         o.addProperty("id", id);
         o.addProperty("name", name);
+        o.addProperty("description", description);
         o.addProperty("type", type.key);
         JsonArray t = new JsonArray();
         for (String s : targets) {
@@ -65,6 +69,7 @@ public final class PointRule {
         PointRule r = new PointRule();
         r.id = Json.id(o, "id");
         r.name = Json.string(o, "name", "", 128);
+        r.description = Json.string(o, "description", "", MAX_DESCRIPTION);
         r.type = RuleType.byKey(Json.string(o, "type", RuleType.KILL.key, 32));
         if (r.type.targets != RuleType.Targets.NONE) {
             for (String s : Json.list(o, "targets", MAX_TARGETS, JsonElement::getAsString)) {
