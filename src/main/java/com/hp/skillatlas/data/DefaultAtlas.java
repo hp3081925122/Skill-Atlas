@@ -44,8 +44,9 @@ public final class DefaultAtlas {
                 new ItemCost("minecraft:bone", 24, ""), new ItemCost("minecraft:rabbit_foot", 2, ""), new ItemCost("minecraft:emerald", 16, ""));
 
         SkillNode haste = node("haste", "mining", "minecraft:golden_pickaxe", 0, 0);
-        haste.levels.add(new SkillLevel(1, Reward.attribute("skill_atlas:mining_speed", 10.0D, RewardOperation.ADD)));
-        haste.levels.add(new SkillLevel(2, Reward.attribute("skill_atlas:mining_speed", 20.0D, RewardOperation.ADD)));
+        for (int i = 1; i <= 10; i++) {
+            haste.levels.add(new SkillLevel(i, Reward.attribute("skill_atlas:mining_speed", i * 10.0D, RewardOperation.ADD)));
+        }
         d.nodes.put(haste.id, haste);
 
         SkillNode vision = node("night_vision", "mining", "minecraft:ender_eye", -64, -48);
