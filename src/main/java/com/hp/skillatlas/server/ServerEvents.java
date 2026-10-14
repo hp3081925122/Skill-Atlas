@@ -1,12 +1,17 @@
 package com.hp.skillatlas.server;
 
 import com.hp.skillatlas.SkillAtlas;
+import com.hp.skillatlas.SkillAttributes;
 import com.hp.skillatlas.data.RuleType;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingExperienceDropEvent;
+import net.minecraftforge.event.entity.living.LivingHealEvent;
+import net.minecraftforge.event.entity.living.LootingLevelEvent;
 import net.minecraftforge.event.entity.living.MobEffectEvent;
 import net.minecraftforge.event.entity.player.AdvancementEvent;
 import net.minecraftforge.event.entity.player.ItemFishedEvent;
@@ -92,6 +97,37 @@ public final class ServerEvents {
     public static void onEffectApplicable(MobEffectEvent.Applicable event) {
         if (event.getEntity() instanceof ServerPlayer player && RewardManager.immune(player, event.getEffectInstance().getEffect())) {
             event.setResult(Event.Result.DENY);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onHeal(LivingHealEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            double bonus = SkillAttributes.value(player, SkillAttributes.HEALING_EFFICIENCY);
+            if (bonus != 0.0D) {
+                event.setAmount((float) (event.getAmount() * (1.0D + bonus / 100.0D)));
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onExperienceDrop(LivingExperienceDropEvent event) {
+        if (event.getAttackingPlayer() instanceof ServerPlayer player && event.getDroppedExperience() > 0) {
+            double bonus = SkillAttributes.value(player, SkillAttributes.EXPERIENCE_GAIN);
+            if (bonus != 0.0D) {
+                event.setDroppedExperience(SkillAttributes.roll(event.getDroppedExperience() * (1.0D + bonus / 100.0D), player.getRandom()));
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLooting(LootingLevelEvent event) {
+        DamageSource source = event.getDamageSource();
+        if (source != null && source.getEntity() instanceof ServerPlayer player) {
+            double bonus = SkillAttributes.value(player, SkillAttributes.LOOTING);
+            if (bonus > 0.0D) {
+                event.setLootingLevel(event.getLootingLevel() + SkillAttributes.roll(bonus, player.getRandom()));
+            }
         }
     }
 

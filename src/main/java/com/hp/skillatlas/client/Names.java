@@ -1,6 +1,7 @@
 package com.hp.skillatlas.client;
 
 import com.hp.skillatlas.ItemCosts;
+import com.hp.skillatlas.SkillAttributes;
 import com.hp.skillatlas.client.ui.Theme;
 import com.hp.skillatlas.data.AtlasLogic;
 import com.hp.skillatlas.data.Category;
@@ -186,6 +187,9 @@ public final class Names {
                 String value;
                 if (r.operation == RewardOperation.ADD) {
                     value = signed(r.amount);
+                    if (SkillAttributes.percent(r.target)) {
+                        value = value + "%";
+                    }
                 } else {
                     value = signed(r.amount * 100.0D) + "%";
                 }
