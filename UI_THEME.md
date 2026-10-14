@@ -1,80 +1,71 @@
-# Skill Atlas 贴图主题
+# Skill Atlas 贴图
 
-界面面板、侧栏、工具栏、分类、按钮各状态、单行/多行输入框底板、搜索结果、节点状态、连线、框选、滚动条和节点悬浮提示均从资源纹理绘制。文字、物品图标和原生输入的光标/文本选区继续使用 Minecraft 的字体和输入机制。
+界面贴图为模组自绘，全部位于一张 256×256 的图集：
 
-当前默认外观已回退到 `new_theme.json` 对应的深色蓝灰主题，使用原有的 30 张 PNG，位于 `assets/skill_atlas/textures/gui/new_theme/`。主题配置与贴图保持截图版本原样，技能功能和名称显示修正保留。
-
-早期 Kenney 的 UI Pack - Pixel Adventure 素材仍保留在 `textures/gui/kenney/`，其 CC0 1.0 许可证、NOTICE 和逐文件来源信息也继续保留；这些素材不是当前默认外观。
-
-## 更换主题
-
-1. 安装随附的“Skill Atlas UI 资源包模板.zip”，放进客户端 `resourcepacks` 并启用；服务器不需要安装这个资源包。
-2. 修改 `assets/skill_atlas/ui/theme.json`，或直接替换 `assets/skill_atlas/textures/gui/new_theme/` 下的对应 PNG。替换 PNG 后保留尺寸；尺寸变化时同步修改 theme.json。
-3. 如果启用了早期 UI 资源包，它的 theme.json 会覆盖模组默认主题；请停用旧包或换成本次更新的模板。游戏中使用 F3+T 重载资源，已打开的技能树、编辑表单与搜索页使用新主题。无需重新编译 JAR。
-
-模组的完整默认定义位于 `assets/skill_atlas/ui/default_theme.json`。实际换肤入口为 `theme.json`：允许只写需要修改的字段，其他字段继承模组内置默认值。资源包中直接覆盖 default_theme.json 不是换肤入口。
-
-例如，只替换普通按钮，并改变标题颜色：
-
-```json
-{
-  "textures": {
-    "button": {
-      "texture": "my_pack:textures/gui/button.png",
-      "width": 64,
-      "height": 32,
-      "u": 0,
-      "v": 0,
-      "regionWidth": 64,
-      "regionHeight": 32,
-      "border": 4,
-      "alpha": 1.0
-    }
-  },
-  "colors": {
-    "title": "#FFF4DBA4"
-  }
-}
+```
+assets/skill_atlas/textures/gui/atlas.png
 ```
 
-自定义资源路径应位于对应命名空间。例如上面的文件放在 `assets/my_pack/textures/gui/button.png`。所有路径用小写英文字母、数字、下划线、短横线和斜杠。
+资源包放入同路径的 PNG 即可替换外观，F3 + T 重载后生效，无需重新编译。替换图需保持 256×256，各元素的位置和尺寸与下表一致。文字颜色、连线颜色和状态色写在代码中，不随贴图变化。
 
-## 纹理参数
+## 九宫格元素
 
-| 字段 | 含义 |
-| --- | --- |
-| texture | PNG 资源路径，包含命名空间 |
-| width / height | 整张 PNG 的实际像素尺寸，1～4096 |
-| u / v | 图集区域左上角像素坐标 |
-| regionWidth / regionHeight | 图集内要绘制的区域尺寸 |
-| border | 九宫格固定边角大小；0 为整块拉伸，必须小于区域最短边的一半 |
-| alpha | 渲染透明度，0～1 |
-| tint | 可选的运行时染色，使用 #AARRGGBB；省略为白色，源 PNG 保持原样 |
+“边框”表示九宫格拉伸时保留的边宽（像素），中间区域会被拉伸。边框为 0 的元素按原尺寸缩放绘制。
 
-面板中心和四边分别拉伸，不平铺成大量小块；一次面板绘制最多 9 个四边形。原尺寸节点直接绘制 1 个四边形。纹理路径、尺寸和切片参数均由 JSON 决定，不在 Java 中逐个固定。
+| 元素 | 用途 | u, v | 宽 × 高 | 边框 |
+| --- | --- | --- | --- | --- |
+| PANEL | 主窗口 | 0, 0 | 32 × 32 | 8 |
+| DIALOG | 对话框 | 34, 0 | 32 × 32 | 8 |
+| INSET | 画布、列表等内凹区域 | 68, 0 | 16 × 16 | 4 |
+| TOOLTIP | 悬浮提示 | 86, 0 | 16 × 16 | 4 |
+| INPUT | 输入框 | 104, 0 | 16 × 16 | 3 |
+| INPUT_FOCUS | 输入框（聚焦） | 122, 0 | 16 × 16 | 3 |
+| BADGE | 等级徽章 | 140, 0 | 8 × 8 | 3 |
+| CHECK_OFF | 复选框（未选） | 150, 0 | 10 × 10 | 0 |
+| CHECK_ON | 复选框（已选） | 162, 0 | 10 × 10 | 0 |
+| GEM | 点数池宝石（按池颜色染色，建议画成白色或浅灰） | 174, 0 | 9 × 9 | 0 |
+| SCROLL_TRACK | 滚动条轨道 | 186, 0 | 6 × 16 | 2 |
+| SCROLL_THUMB | 滚动条滑块 | 194, 0 | 6 × 16 | 2 |
+| SCROLL_THUMB_HOVER | 滚动条滑块（悬停） | 202, 0 | 6 × 16 | 2 |
+| BUTTON / _HOVER / _PRESSED / _DISABLED | 普通按钮四种状态 | 0 / 18 / 36 / 54, 34 | 16 × 16 | 4 |
+| PRIMARY / _HOVER / _PRESSED | 主要按钮（保存、确定） | 72 / 90 / 108, 34 | 16 × 16 | 4 |
+| DANGER / _HOVER / _PRESSED | 危险按钮（删除） | 126 / 144 / 162, 34 | 16 × 16 | 4 |
+| TAB / _HOVER / _SELECTED | 分类页签 | 180 / 206 / 232, 34 | 24 × 20 | 4 |
 
-## 主题槽位
+## 技能节点
 
-| 用途 | 槽位 |
-| --- | --- |
-| 背景与布局 | background、panel、sidebar、toolbar、canvas、footer |
-| 按钮 | button、button_hover、button_pressed、button_disabled |
-| 输入底板 | input、input_focus |
-| 分类与搜索 | category、category_selected、result、result_hover |
-| 节点 | node_locked、node_available、node_learned、node_mastered、node_selected |
-| 其他 | tooltip、scroll_track、scroll_thumb、selection、grid、line_locked、line_learned |
-| 预留输入装饰 | cursor、text_selection；原生文字输入当前不使用这两个预留槽位 |
+| 元素 | 用途 | u, v | 宽 × 高 |
+| --- | --- | --- | --- |
+| NODE_LOCKED | 普通节点：未解锁 | 0, 56 | 26 × 26 |
+| NODE_AVAILABLE | 普通节点：可学习 | 28, 56 | 26 × 26 |
+| NODE_LEARNED | 普通节点：已学习 | 56, 56 | 26 × 26 |
+| NODE_MAXED | 普通节点：已满级 | 84, 56 | 26 × 26 |
+| NODE_SELECT | 普通节点：选中框 | 112, 56 | 30 × 30 |
+| NODE_GLOW | 普通节点：光效（可学习时呼吸闪烁，搜索命中时金色） | 144, 56 | 34 × 34 |
+| MAJOR_LOCKED | 大型节点：未解锁 | 0, 92 | 34 × 34 |
+| MAJOR_AVAILABLE | 大型节点：可学习 | 36, 92 | 34 × 34 |
+| MAJOR_LEARNED | 大型节点：已学习 | 72, 92 | 34 × 34 |
+| MAJOR_MAXED | 大型节点：已满级 | 108, 92 | 34 × 34 |
+| MAJOR_SELECT | 大型节点：选中框 | 144, 92 | 38 × 38 |
+| MAJOR_GLOW | 大型节点：光效 | 184, 92 | 42 × 42 |
 
-颜色使用 `#AARRGGBB` 格式。`colors` 的现有键可在完整默认定义中查看。`metrics` 可调网格间距（gridSpacing，8～256）、网格点尺寸（gridSize，1～8）、连线宽度（lineWidth，1～12）、悬浮提示边距（tooltipPadding，2～16）、悬浮提示最大宽度（tooltipMaxWidth，64～1024）。布局和点击区域仍由界面管理，换肤不会更改学习或编辑逻辑。
+点数不足时节点框会整体压暗；编辑模式下，按当前玩家进度仍处于隐藏状态的技能半透明显示。光效会被染成金色（搜索命中）或按透明度闪烁，建议用白色绘制；选中框按原色绘制。
 
-主题重载只读取一次 JSON 并检查 PNG 头与尺寸，渲染期间不反复读取磁盘或解析 JSON。错误主题会输出明确英文日志并回退到默认配置；缺失或尺寸不符的自定义纹理按槽位回退。若资源包直接损坏同路径的内置 PNG，应撤销该文件覆盖，避免 Minecraft 自身显示缺失贴图。
+## 图标
 
-## 实机验收
+24 个 12 × 12 的单色图标从 (0, 136) 开始，每格间距 14 像素，每行 18 个。第 i 个图标的左上角为 `((i % 18) × 14, 136 + (i / 18) × 14)`。图标会按使用场景染色，请画成白色。
 
-- [ ] 不同 GUI 缩放与窗口尺寸下，面板边角、输入框、分类、表单、Tooltip 和确认弹窗没有拉伸异常或遮挡。
-- [ ] 按钮普通、悬浮、按下、禁用，节点未满足、可学习、已学习、满级、选中状态显示正确。
-- [ ] 单行输入点击与光标定位、多行输入/选择/滚动、循环选项鼠标/键盘/Shift 反向操作正常。
-- [ ] 资源包只换一张按钮图或一项颜色后，F3+T 立即生效；无效 JSON、非法切片和缺图能够回退且有日志。
-- [ ] 千节点场景中的缩放、拖动、连线裁剪与帧率可接受，学习和编辑功能保持正常。
+| 序号 | 图标 | 序号 | 图标 | 序号 | 图标 |
+| --- | --- | --- | --- | --- | --- |
+| 0 | 搜索 | 8 | 粘贴 | 16 | 上 |
+| 1 | 编辑 | 9 | 连线 | 17 | 下 |
+| 2 | 加号 | 10 | 眼睛 | 18 | 手 |
+| 3 | 减号 | 11 | 隐藏 | 19 | 信息 |
+| 4 | 关闭 | 12 | 锁 | 20 | 书 |
+| 5 | 齿轮 | 13 | 对勾 | 21 | 目标 |
+| 6 | 垃圾桶 | 14 | 左 | 22 | 星 |
+| 7 | 复制 | 15 | 右 | 23 | 文件夹 |
 
-编译、资源检查与自动测试不能替代以上游戏内验收；此次没有自动启动客户端。
+## 技能图标
+
+技能与分类的图标可以使用物品，也可以使用任意贴图。贴图类型需填写完整路径，例如 `minecraft:textures/item/apple.png` 或 `my_pack:textures/gui/skill/fire.png`，贴图按正方形绘制。服务端只检查路径格式，客户端缺少贴图时显示为紫黑方块。
