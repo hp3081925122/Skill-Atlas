@@ -69,6 +69,7 @@ public final class DefaultAtlas {
         SkillNode luck = node("fortune", "mining", "minecraft:emerald", 64, 32);
         luck.prerequisites.add(new Prerequisite("haste", true));
         luck.levels.add(new SkillLevel(2, Reward.attribute("minecraft:generic.luck", 1.0D, RewardOperation.ADD)));
+        luck.levels.get(0).items.add(new ItemCost("minecraft:emerald", 4, ""));
         d.nodes.put(luck.id, luck);
         return d;
     }

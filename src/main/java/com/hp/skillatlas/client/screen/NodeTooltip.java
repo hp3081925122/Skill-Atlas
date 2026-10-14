@@ -4,6 +4,7 @@ import com.hp.skillatlas.client.ClientAtlas;
 import com.hp.skillatlas.client.Names;
 import com.hp.skillatlas.data.AtlasDefinition;
 import com.hp.skillatlas.data.AtlasLogic;
+import com.hp.skillatlas.data.ItemCost;
 import com.hp.skillatlas.data.PlayerProgress;
 import com.hp.skillatlas.data.Prerequisite;
 import com.hp.skillatlas.data.Reward;
@@ -37,7 +38,7 @@ public final class NodeTooltip {
         PlayerProgress p = ClientAtlas.progress;
         List<Component> out = new ArrayList<>();
         out.add(Names.node(n));
-        AtlasLogic.State state = AtlasLogic.state(d, n, p);
+        AtlasLogic.State state = AtlasLogic.state(d, n, p, ClientAtlas::hasItems);
         int level = Math.min(p.level(n.id), n.maxLevel());
         int stateColor = Names.stateColor(state) & 0xFFFFFF;
         MutableComponent line = Names.state(state).withStyle(s -> s.withColor(stateColor));
@@ -82,6 +83,23 @@ public final class NodeTooltip {
             }
             for (Reward r : next.rewards) {
                 out.add(Component.literal(" • ").append(Names.reward(r, details)));
+            }
+            if (!next.items.isEmpty()) {
+                out.add(Component.translatable("skill_atlas.ui.items_required").withStyle(s -> s.withColor(HEADER)));
+                int[] owned = ClientAtlas.ownedItems(next.items);
+                for (int i = 0; i < next.items.size(); i++) {
+                    ItemCost c = next.items.get(i);
+                    int itemColor = BAD;
+                    if (owned[i] >= c.count) {
+                        itemColor = OK;
+                    }
+                    int ic = itemColor;
+                    MutableComponent row = Component.literal(" • ").append(Component.translatable("skill_atlas.ui.item_cost", Names.item(c), owned[i], c.count).withStyle(s -> s.withColor(ic)));
+                    if (details && !c.nbt.isEmpty()) {
+                        row = row.append(Component.literal(" " + c.nbt).withStyle(s -> s.withColor(MUTED)));
+                    }
+                    out.add(row);
+                }
             }
         }
         List<Prerequisite> pres = new ArrayList<>();

@@ -1,10 +1,12 @@
 package com.hp.skillatlas.server;
 
+import com.hp.skillatlas.ItemCosts;
 import com.hp.skillatlas.data.AtlasDefinition;
 import com.hp.skillatlas.data.AtlasException;
 import com.hp.skillatlas.data.Category;
 import com.hp.skillatlas.data.EditOps;
 import com.hp.skillatlas.data.Icon;
+import com.hp.skillatlas.data.ItemCost;
 import com.hp.skillatlas.data.PointRule;
 import com.hp.skillatlas.data.Reward;
 import com.hp.skillatlas.data.RewardType;
@@ -15,6 +17,7 @@ import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.Items;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
@@ -35,6 +38,9 @@ public final class RegistryCheck {
             for (SkillLevel level : n.levels) {
                 for (Reward r : level.rewards) {
                     reward(r);
+                }
+                for (ItemCost c : level.items) {
+                    item(c.item, c.nbt);
                 }
             }
             if (!trusted && !commands(n).equals(commands(before.nodes.get(id)))) {
@@ -91,12 +97,16 @@ public final class RegistryCheck {
         if (icon.isTexture()) {
             return;
         }
-        if (!ForgeRegistries.ITEMS.containsKey(new ResourceLocation(icon.id))) {
-            throw new AtlasException("skill_atlas.error.unknown_item", icon.id);
+        item(icon.id, icon.nbt);
+    }
+
+    private static void item(String id, String nbt) {
+        if (ItemCosts.item(id) == Items.AIR) {
+            throw new AtlasException("skill_atlas.error.unknown_item", id);
         }
-        if (!icon.nbt.isEmpty()) {
+        if (!nbt.isEmpty()) {
             try {
-                TagParser.parseTag(icon.nbt);
+                TagParser.parseTag(nbt);
             } catch (CommandSyntaxException e) {
                 throw new AtlasException("skill_atlas.error.bad_nbt", e.getMessage());
             }

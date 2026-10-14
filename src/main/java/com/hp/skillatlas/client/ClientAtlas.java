@@ -2,15 +2,19 @@ package com.hp.skillatlas.client;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.hp.skillatlas.ItemCosts;
 import com.hp.skillatlas.SkillAtlas;
 import com.hp.skillatlas.data.AtlasDefinition;
 import com.hp.skillatlas.data.EditOps;
+import com.hp.skillatlas.data.ItemCost;
 import com.hp.skillatlas.data.PlayerProgress;
 import com.hp.skillatlas.data.SkillNode;
 import com.hp.skillatlas.network.AtlasNetwork;
 import com.hp.skillatlas.network.LearnPacket;
 import com.hp.skillatlas.network.Payload;
 import com.hp.skillatlas.network.ResultPacket;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -46,6 +50,30 @@ public final class ClientAtlas {
     private static boolean resyncRequested;
 
     private ClientAtlas() {
+    }
+
+    public static boolean hasItems(List<ItemCost> costs) {
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player == null) {
+            return costs.isEmpty();
+        }
+        return ItemCosts.has(player.getInventory(), costs);
+    }
+
+    public static int[] ownedItems(List<ItemCost> costs) {
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player == null) {
+            return new int[costs.size()];
+        }
+        return ItemCosts.owned(player.getInventory(), costs);
+    }
+
+    public static int inventoryStamp() {
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player == null) {
+            return 0;
+        }
+        return player.getInventory().getTimesChanged();
     }
 
     public static void reset() {
