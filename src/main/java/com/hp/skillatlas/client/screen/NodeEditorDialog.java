@@ -24,6 +24,7 @@ import com.hp.skillatlas.data.AtlasException;
 import com.hp.skillatlas.data.Category;
 import com.hp.skillatlas.data.EditOps;
 import com.hp.skillatlas.data.Icon;
+import com.hp.skillatlas.data.ItemCost;
 import com.hp.skillatlas.data.Json;
 import com.hp.skillatlas.data.Prerequisite;
 import com.hp.skillatlas.data.Reward;
@@ -402,6 +403,9 @@ public final class NodeEditorDialog extends Dialog {
             for (int j = 0; j < lv.rewards.size(); j++) {
                 rewardCard(f, lv, j);
             }
+            for (int j = 0; j < lv.items.size(); j++) {
+                itemCard(f, lv, j);
+            }
             Button addReward = new Button(Component.translatable("skill_atlas.ui.editor.add_reward"), () -> {
                 lv.rewards.add(new Reward());
                 touch(Section.LEVELS);
@@ -409,7 +413,14 @@ public final class NodeEditorDialog extends Dialog {
             });
             addReward.icon = Sprites.PLUS;
             addReward.enabled = lv.rewards.size() < SkillLevel.MAX_REWARDS;
-            f.cells(Component.empty(), new float[]{1}, addReward);
+            Button addItem = new Button(Component.translatable("skill_atlas.ui.editor.add_item"), () -> stack.push(PickerDialog.items(id -> {
+                lv.items.add(new ItemCost(id, 1, ""));
+                touch(Section.LEVELS);
+                rebuild();
+            })));
+            addItem.icon = Sprites.PLUS;
+            addItem.enabled = lv.items.size() < SkillLevel.MAX_ITEMS;
+            f.cells(Component.empty(), new float[]{1, 1}, addReward, addItem);
             f.gap(4);
         }
         Button addLevel = new Button(Component.translatable("skill_atlas.ui.editor.add_level"), () -> {
@@ -426,6 +437,33 @@ public final class NodeEditorDialog extends Dialog {
         save = new Button(Component.translatable("skill_atlas.ui.save"), this::save).style(Button.Style.PRIMARY);
         save.enabled = !saving;
         footer(cancel, save);
+    }
+
+    private void itemCard(Form f, SkillLevel lv, int j) {
+        ItemCost c = lv.items.get(j);
+        Runnable pickItem = () -> stack.push(PickerDialog.items(id -> {
+            c.item = id;
+            touch(Section.LEVELS);
+            rebuild();
+        }));
+        IconButton preview = new IconButton(() -> new Icon(Icon.ITEM, c.item, c.nbt), pickItem);
+        preview.tip(() -> List.of(Names.item(c)));
+        TextInput id = text(c.item, 256, Section.LEVELS, v -> c.item = Json.normalizeResource(v));
+        id.valid = v -> registered(ForgeRegistries.ITEMS, v);
+        id.tip(() -> List.of(Names.item(c)));
+        TextInput count = intField(c.count, 1, ItemCost.MAX_COUNT, Section.LEVELS, v -> c.count = v);
+        count.tip(Component.translatable("skill_atlas.ui.field.item_count"));
+        Button pick = new Button(Component.translatable("skill_atlas.ui.pick"), pickItem);
+        Button rm = Button.icon(Sprites.TRASH, Component.translatable("skill_atlas.ui.editor.remove_item"), () -> {
+            lv.items.remove(c);
+            touch(Section.LEVELS);
+            rebuild();
+        });
+        f.cells(Component.translatable("skill_atlas.ui.editor.item", j + 1), new float[]{1.2F, 5, 1.8F, 2, 1}, preview, id, count, pick, rm);
+        TextInput nbt = text(c.nbt, ItemCost.MAX_NBT, Section.LEVELS, v -> c.nbt = v.trim());
+        nbt.placeholder(Component.translatable("skill_atlas.ui.field.item_nbt.placeholder"));
+        nbt.valid = v -> v.isBlank() || validNbt(v);
+        f.row(Component.translatable("skill_atlas.ui.field.nbt"), nbt);
     }
 
     private void rewardCard(Form f, SkillLevel lv, int j) {

@@ -1,12 +1,15 @@
 package com.hp.skillatlas.data;
 
+import java.util.List;
+import java.util.function.Predicate;
+
 public final class AtlasLogic {
     public enum State {
         LOCKED, UNAFFORDABLE, AVAILABLE, LEARNED, UPGRADABLE, MAXED
     }
 
     public enum Check {
-        OK, MISSING, MAXED, LOCKED, NO_POINTS
+        OK, MISSING, MAXED, LOCKED, NO_POINTS, NO_ITEMS
     }
 
     private AtlasLogic() {
@@ -40,7 +43,7 @@ public final class AtlasLogic {
         return prerequisitesMet(d, n, p);
     }
 
-    public static Check check(AtlasDefinition d, SkillNode n, PlayerProgress p) {
+    public static Check check(AtlasDefinition d, SkillNode n, PlayerProgress p, Predicate<List<ItemCost>> items) {
         if (n == null) {
             return Check.MISSING;
         }
@@ -51,15 +54,19 @@ public final class AtlasLogic {
         if (!prerequisitesMet(d, n, p)) {
             return Check.LOCKED;
         }
-        if (p.points(d.poolOf(n)) < n.levels.get(level).cost) {
+        SkillLevel next = n.levels.get(level);
+        if (p.points(d.poolOf(n)) < next.cost) {
             return Check.NO_POINTS;
+        }
+        if (!next.items.isEmpty() && !items.test(next.items)) {
+            return Check.NO_ITEMS;
         }
         return Check.OK;
     }
 
-    public static State state(AtlasDefinition d, SkillNode n, PlayerProgress p) {
+    public static State state(AtlasDefinition d, SkillNode n, PlayerProgress p, Predicate<List<ItemCost>> items) {
         int level = p.level(n.id);
-        Check c = check(d, n, p);
+        Check c = check(d, n, p, items);
         if (c == Check.MAXED) {
             return State.MAXED;
         }

@@ -1,8 +1,11 @@
 package com.hp.skillatlas.client;
 
+import com.hp.skillatlas.ItemCosts;
 import com.hp.skillatlas.client.ui.Theme;
 import com.hp.skillatlas.data.AtlasLogic;
 import com.hp.skillatlas.data.Category;
+import com.hp.skillatlas.data.Icon;
+import com.hp.skillatlas.data.ItemCost;
 import com.hp.skillatlas.data.Json;
 import com.hp.skillatlas.data.PointPool;
 import com.hp.skillatlas.data.PointRule;
@@ -22,6 +25,7 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.registries.ForgeRegistries;
 
@@ -149,6 +153,13 @@ public final class Names {
             }
         }
         return Component.literal(id);
+    }
+
+    public static MutableComponent item(ItemCost c) {
+        if (ItemCosts.item(c.item) == Items.AIR) {
+            return Component.literal(c.item);
+        }
+        return Icons.stack(new Icon(Icon.ITEM, c.item, c.nbt)).getHoverName().copy();
     }
 
     public static String number(double v) {

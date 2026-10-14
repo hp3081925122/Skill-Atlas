@@ -3,6 +3,7 @@ package com.hp.skillatlas.server;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.hp.skillatlas.AtlasConfig;
+import com.hp.skillatlas.ItemCosts;
 import com.hp.skillatlas.SkillAtlas;
 import com.hp.skillatlas.data.AtlasDefinition;
 import com.hp.skillatlas.data.AtlasException;
@@ -367,17 +368,23 @@ public final class AtlasServer {
     public static void learn(ServerPlayer player, String nodeId) {
         PlayerProgress p = progress(player);
         SkillNode n = definition.nodes.get(nodeId);
-        AtlasLogic.Check check = AtlasLogic.check(definition, n, p);
+        AtlasLogic.Check check = AtlasLogic.check(definition, n, p, costs -> ItemCosts.has(player.getInventory(), costs));
         if (check == AtlasLogic.Check.OK && !AtlasLogic.visible(definition, n, p)) {
             check = AtlasLogic.Check.LOCKED;
+        }
+        int level = p.level(nodeId);
+        if (check == AtlasLogic.Check.OK && !ItemCosts.consume(player.getInventory(), n.levels.get(level).items)) {
+            check = AtlasLogic.Check.NO_ITEMS;
         }
         if (check != AtlasLogic.Check.OK) {
             result(player, ResultPacket.LEARN, false, "skill_atlas.learn." + check.name().toLowerCase(Locale.ROOT), List.of(nodeId));
             sendProgress(player);
             return;
         }
-        int level = p.level(n.id);
         SkillLevel next = n.levels.get(level);
+        if (!next.items.isEmpty()) {
+            SkillAtlas.LOGGER.debug("Consumed {} delivery item requirement(s) from {} for skill {} level {}", next.items.size(), player.getGameProfile().getName(), n.id, level + 1);
+        }
         String pool = definition.poolOf(n);
         p.addPoints(pool, -next.cost);
         p.alignPayments(n.id, level);

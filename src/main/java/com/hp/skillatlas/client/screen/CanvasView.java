@@ -466,7 +466,7 @@ public final class CanvasView extends Widget {
                 continue;
             }
             boolean ghost = ClientAtlas.editMode && !AtlasLogic.visible(d, n, p);
-            drawn.add(new Drawn(n, px, py, s, AtlasLogic.state(d, n, p), !searching || matches.contains(n.id), ghost));
+            drawn.add(new Drawn(n, px, py, s, AtlasLogic.state(d, n, p, ClientAtlas::hasItems), !searching || matches.contains(n.id), ghost));
         }
         long now = Util.getMillis();
         float wave = (float) (0.5D + 0.5D * Math.sin(now / 320.0D));
@@ -814,7 +814,7 @@ public final class CanvasView extends Widget {
             } else {
                 String id = n.id;
                 menu.add(Component.translatable("skill_atlas.ui.menu.details"), Sprites.INFO, () -> main.stack.push(new InfoDialog(id)));
-                AtlasLogic.Check check = AtlasLogic.check(ClientAtlas.definition, n, ClientAtlas.progress);
+                AtlasLogic.Check check = AtlasLogic.check(ClientAtlas.definition, n, ClientAtlas.progress, ClientAtlas::hasItems);
                 String key = "skill_atlas.ui.learn";
                 if (ClientAtlas.progress.level(n.id) > 0) {
                     key = "skill_atlas.ui.upgrade";

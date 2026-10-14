@@ -21,6 +21,7 @@ public final class InfoDialog extends Dialog {
     private final String nodeId;
     private int builtVersion;
     private int builtProgress;
+    private int builtItems;
 
     public InfoDialog(String nodeId) {
         super(Component.translatable("skill_atlas.ui.details"), 300, 280);
@@ -35,6 +36,7 @@ public final class InfoDialog extends Dialog {
     protected void build() {
         builtVersion = ClientAtlas.version;
         builtProgress = ClientAtlas.progressVersion;
+        builtItems = ClientAtlas.inventoryStamp();
         SkillNode n = node();
         if (n == null) {
             Label gone = add(new Label(Component.translatable("skill_atlas.error.missing_node", nodeId), Theme.RED));
@@ -49,7 +51,7 @@ public final class InfoDialog extends Dialog {
                 if (cur == null) {
                     return;
                 }
-                AtlasLogic.State s = AtlasLogic.state(ClientAtlas.definition, cur, ClientAtlas.progress);
+                AtlasLogic.State s = AtlasLogic.state(ClientAtlas.definition, cur, ClientAtlas.progress, ClientAtlas::hasItems);
                 Sprites.Sprite frame = Sprites.NODE_AVAILABLE;
                 if (s == AtlasLogic.State.LOCKED) {
                     frame = Sprites.NODE_LOCKED;
@@ -89,7 +91,7 @@ public final class InfoDialog extends Dialog {
             cy += l.h + 1;
         }
         scroll.rebuilt();
-        AtlasLogic.Check check = AtlasLogic.check(ClientAtlas.definition, n, ClientAtlas.progress);
+        AtlasLogic.Check check = AtlasLogic.check(ClientAtlas.definition, n, ClientAtlas.progress, ClientAtlas::hasItems);
         String key = "skill_atlas.ui.learn";
         if (ClientAtlas.progress.level(n.id) > 0) {
             key = "skill_atlas.ui.upgrade";
@@ -104,7 +106,7 @@ public final class InfoDialog extends Dialog {
 
     @Override
     public void render(float pt) {
-        if (builtVersion != ClientAtlas.version || builtProgress != ClientAtlas.progressVersion) {
+        if (builtVersion != ClientAtlas.version || builtProgress != ClientAtlas.progressVersion || builtItems != ClientAtlas.inventoryStamp()) {
             layout(stack.width, stack.height);
         }
         super.render(pt);
