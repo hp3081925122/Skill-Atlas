@@ -6,6 +6,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 
 @Mod(SkillAtlas.MOD_ID)
@@ -16,6 +17,7 @@ public final class SkillAtlas {
     public SkillAtlas() {
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, AtlasConfig.SERVER_SPEC);
         ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, AtlasConfig.CLIENT_SPEC);
+        SkillAttributes.register(FMLJavaModLoadingContext.get().getModEventBus());
         AtlasNetwork.register();
     }
 
