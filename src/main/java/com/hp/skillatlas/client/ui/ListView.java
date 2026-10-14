@@ -15,6 +15,7 @@ public class ListView<T> extends Widget {
 
     private List<T> items = List.of();
     public float rowHeight = 18;
+    public float cellWidth;
     public RowRenderer<T> renderer;
     public BiConsumer<T, Integer> onClick;
     public Consumer<T> onDouble;
@@ -45,8 +46,16 @@ public class ListView<T> extends Widget {
         scroll = 0;
     }
 
+    private int columns() {
+        if (cellWidth <= 0) {
+            return 1;
+        }
+        return Math.max(1, (int) Math.floor((w - ScrollGroup.BAR - 5) / cellWidth));
+    }
+
     private float content() {
-        return items.size() * rowHeight;
+        int cols = columns();
+        return (items.size() + cols - 1) / cols * rowHeight;
     }
 
     private float max() {
@@ -58,7 +67,7 @@ public class ListView<T> extends Widget {
     }
 
     private float listWidth() {
-        if (max() > 0) {
+        if (cellWidth > 0 || max() > 0) {
             return w - ScrollGroup.BAR - 5;
         }
         return w - 4;
@@ -68,8 +77,11 @@ public class ListView<T> extends Widget {
         if (!contains(mx, my) || mx > x + 2 + listWidth()) {
             return -1;
         }
-        int i = (int) Math.floor((my - y - 2 + scroll) / rowHeight);
-        if (i < 0 || i >= items.size()) {
+        int row = (int) Math.floor((my - y - 2 + scroll) / rowHeight);
+        int cols = columns();
+        int col = Math.min(cols - 1, (int) Math.floor((mx - x - 2) / (listWidth() / cols)));
+        int i = row * cols + col;
+        if (row < 0 || col < 0 || i >= items.size()) {
             return -1;
         }
         return i;
@@ -92,15 +104,18 @@ public class ListView<T> extends Widget {
             hoverRow = rowAt(Ui.mouseX, Ui.mouseY);
         }
         Gfx.pushClip(x + 2, y + 2, w - 4, h - 4);
-        int first = Math.max(0, (int) Math.floor(scroll / rowHeight));
-        int last = Math.min(items.size() - 1, (int) Math.ceil((scroll + h) / rowHeight));
+        int cols = columns();
         float lw = listWidth();
+        float cw = lw / cols;
+        int first = Math.max(0, (int) Math.floor(scroll / rowHeight)) * cols;
+        int last = Math.min(items.size() - 1, ((int) Math.ceil((scroll + h) / rowHeight) + 1) * cols - 1);
         for (int i = first; i <= last; i++) {
-            float ry = y + 2 + i * rowHeight - scroll;
+            float rx = x + 2 + i % cols * cw;
+            float ry = y + 2 + i / cols * rowHeight - scroll;
             if (i == hoverRow) {
-                Gfx.fill(x + 2, ry, lw, rowHeight, Theme.ROW_HOVER);
+                Gfx.fill(rx, ry, cw, rowHeight, Theme.ROW_HOVER);
             }
-            renderer.render(items.get(i), x + 2, ry, lw, rowHeight, i == hoverRow);
+            renderer.render(items.get(i), rx, ry, cw, rowHeight, i == hoverRow);
         }
         Gfx.popClip();
         if (max() > 0) {

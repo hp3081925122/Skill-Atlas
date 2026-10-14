@@ -101,6 +101,7 @@ public final class PickerDialog extends Dialog {
     private List<Entry> all;
     private int mode;
     private int rowHeight = 18;
+    private float cell;
     private TextInput search;
     private ListView<Entry> list;
     private String query = "";
@@ -174,7 +175,7 @@ public final class PickerDialog extends Dialog {
             }
         }
         List<Mode> modes = List.of(new Mode(Component.translatable("skill_atlas.ui.pick.all_items"), all), new Mode(Component.translatable("skill_atlas.ui.pick.inventory_items"), owned));
-        return new PickerDialog(Component.translatable("skill_atlas.ui.pick.item"), modes, "items", onPick);
+        return new PickerDialog(Component.translatable("skill_atlas.ui.pick.item"), modes, "items", onPick).grid(20);
     }
 
     public static PickerDialog textures(Consumer<String> onPick) {
@@ -182,13 +183,19 @@ public final class PickerDialog extends Dialog {
         ids.sort(Comparator.comparing(ResourceLocation::toString));
         List<Entry> out = new ArrayList<>(ids.size());
         PickerDialog d = new PickerDialog(Component.translatable("skill_atlas.ui.pick.texture"), List.of(new Mode(Component.empty(), out)), "textures", e -> onPick.accept(e.id));
-        d.rowHeight = 34;
+        d.grid(38);
         for (ResourceLocation rl : ids) {
             String path = rl.getPath().substring("textures/".length());
             out.add(new Entry(rl.toString(), Component.literal(rl.getNamespace() + ":" + path), (x, y, size) -> d.thumb(rl, x, y, size), modName(rl)));
         }
         SkillAtlas.LOGGER.debug("Texture picker listed {} png resources", out.size());
         return d;
+    }
+
+    private PickerDialog grid(float size) {
+        cell = size;
+        rowHeight = (int) size;
+        return this;
     }
 
     private int[] pngSize(ResourceLocation rl) {
@@ -249,7 +256,7 @@ public final class PickerDialog extends Dialog {
             }
             out.add(new Entry(id.toString(), block.getName(), icon, modName(id)));
         }
-        return new PickerDialog(Component.translatable("skill_atlas.ui.pick.block"), out, onPick);
+        return new PickerDialog(Component.translatable("skill_atlas.ui.pick.block"), out, onPick).grid(20);
     }
 
     public static PickerDialog entities(Consumer<String> onPick) {
@@ -293,7 +300,7 @@ public final class PickerDialog extends Dialog {
             };
             out.add(new Entry(id.toString(), effect.getDisplayName(), icon, modName(id)));
         }
-        return new PickerDialog(Component.translatable("skill_atlas.ui.pick.effect"), out, onPick);
+        return new PickerDialog(Component.translatable("skill_atlas.ui.pick.effect"), out, onPick).grid(22);
     }
 
     public static PickerDialog advancements(Consumer<String> onPick) {
@@ -420,6 +427,7 @@ public final class PickerDialog extends Dialog {
         };
         list = add(new ListView<>(this::renderRow));
         list.rowHeight = rowHeight;
+        list.cellWidth = cell;
         list.bounds(contentX(), top + 20, contentW(), contentY() + contentH() - top - 20);
         list.empty = Component.translatable("skill_atlas.ui.no_results");
         list.onClick = (e, button) -> {
@@ -450,6 +458,11 @@ public final class PickerDialog extends Dialog {
     }
 
     private void renderRow(Entry e, float rx, float ry, float rw, float rh, boolean hovered) {
+        if (cell > 0) {
+            float s = Math.min(rw, rh) - 4;
+            e.icon.draw(rx + (rw - s) / 2.0F, ry + (rh - s) / 2.0F, s);
+            return;
+        }
         float size = rh - 2;
         e.icon.draw(rx + 2, ry + 1, size);
         int color = Theme.TEXT;
