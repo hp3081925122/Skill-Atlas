@@ -69,16 +69,8 @@ public final class CategoryDialog extends Dialog {
         TextInput name = new TextInput(Texts.display(c.name)).max(128).placeholder(Component.translatable("skill_atlas.ui.field.name.placeholder"));
         name.onChange = s -> c.name = s;
         inputs.add(f.row(Component.translatable("skill_atlas.ui.field.name"), name));
-        TextInput icon = new TextInput(c.icon.id).max(256);
-        icon.valid = s -> Json.validResource(Json.normalizeResource(s));
-        icon.onChange = s -> c.icon = Icon.item(Json.normalizeResource(s));
-        inputs.add(icon);
-        IconButton preview = new IconButton(() -> c.icon, () -> stack.push(PickerDialog.itemStacks(picked -> {
-            c.icon = new Icon(Icon.ITEM, picked.id, picked.nbt);
-            icon.setText(picked.id);
-        })));
-        Button pick = new Button(Component.translatable("skill_atlas.ui.pick"), preview.action);
-        f.cells(Component.translatable("skill_atlas.ui.field.icon"), new float[]{1, 6, 2.4F}, preview, icon, pick);
+        ItemSlot icon = new ItemSlot(() -> c.icon, () -> stack.push(PickerDialog.itemStacks(picked -> c.icon = new Icon(Icon.ITEM, picked.id, picked.nbt))));
+        f.row(Component.translatable("skill_atlas.ui.field.icon"), icon);
         List<String> pools = new ArrayList<>(ClientAtlas.definition.pools.keySet());
         if (pools.isEmpty()) {
             NodeEditorDialog.hint(f, Component.translatable("skill_atlas.ui.category.no_pools"), Theme.RED);

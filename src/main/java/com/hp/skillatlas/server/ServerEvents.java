@@ -121,6 +121,14 @@ public final class ServerEvents {
     }
 
     @SubscribeEvent
+    public static void onBreakSpeed(PlayerEvent.BreakSpeed event) {
+        double bonus = SkillAttributes.value(event.getEntity(), SkillAttributes.MINING_SPEED);
+        if (bonus != 0.0D) {
+            event.setNewSpeed(event.getNewSpeed() * (float) Math.max(0.0D, 1.0D + bonus / 100.0D));
+        }
+    }
+
+    @SubscribeEvent
     public static void onLooting(LootingLevelEvent event) {
         DamageSource source = event.getDamageSource();
         if (source != null && source.getEntity() instanceof ServerPlayer player) {
