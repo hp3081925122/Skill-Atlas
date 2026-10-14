@@ -345,7 +345,7 @@
   "skill_atlas.ui.category.edit": "Edit Category: %s",
   "skill_atlas.ui.category.hint": "All skills in this category spend points from the selected pool",
   "skill_atlas.ui.category.background.placeholder": "Leave empty for the default background",
-  "skill_atlas.ui.category.background.hint": "Texture path, e.g. minecraft:textures/block/deepslate.png or skill_atlas:textures/gui/backgrounds/combat.png from a resource pack. Without tiling the image covers the canvas, centered and cropped; invalid paths fall back to the default background.",
+  "skill_atlas.ui.category.background.hint": "Click \"Pick\" to browse textures from all resource packs, or type a path. Without tiling the image covers the canvas and is center-cropped; invalid paths fall back to the default background.",
   "skill_atlas.ui.category.no_pools": "Create a point pool in \"Skill Points\" first",
   "skill_atlas.ui.category_progress": "Learned %s / %s",
   "skill_atlas.ui.category_pool": "Point pool: %s",
@@ -382,6 +382,9 @@
   "skill_atlas.ui.rule.preview": "%s → %s %s",
 
   "skill_atlas.ui.pick.item": "Pick Item",
+  "skill_atlas.ui.pick.all_items": "All Items",
+  "skill_atlas.ui.pick.inventory_items": "Inventory",
+  "skill_atlas.ui.pick.texture": "Choose Texture",
   "skill_atlas.ui.pick.block": "Pick Block",
   "skill_atlas.ui.pick.entity": "Pick Mob",
   "skill_atlas.ui.pick.attribute": "Pick Attribute",
@@ -393,7 +396,7 @@
 
   "skill_atlas.ui.icon_type.item": "Item",
   "skill_atlas.ui.icon_type.texture": "Texture",
-  "skill_atlas.ui.icon_type.texture.hint": "Enter the full texture path, e.g. minecraft:textures/item/apple.png",
+  "skill_atlas.ui.icon_type.texture.hint": "Click \"Pick\" to browse textures from all resource packs, or type a full texture path, e.g. minecraft:textures/item/apple.png",
 
   "skill_atlas.ui.requirement.all": "All prerequisites",
   "skill_atlas.ui.requirement.any": "Any prerequisite",

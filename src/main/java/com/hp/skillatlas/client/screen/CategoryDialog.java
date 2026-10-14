@@ -73,9 +73,9 @@ public final class CategoryDialog extends Dialog {
         icon.valid = s -> Json.validResource(Json.normalizeResource(s));
         icon.onChange = s -> c.icon = Icon.item(Json.normalizeResource(s));
         inputs.add(icon);
-        IconButton preview = new IconButton(() -> c.icon, () -> stack.push(PickerDialog.items(picked -> {
-            c.icon = Icon.item(picked);
-            icon.setText(picked);
+        IconButton preview = new IconButton(() -> c.icon, () -> stack.push(PickerDialog.itemStacks(picked -> {
+            c.icon = new Icon(Icon.ITEM, picked.id, picked.nbt);
+            icon.setText(picked.id);
         })));
         Button pick = new Button(Component.translatable("skill_atlas.ui.pick"), preview.action);
         f.cells(Component.translatable("skill_atlas.ui.field.icon"), new float[]{1, 6, 2.4F}, preview, icon, pick);
@@ -93,7 +93,12 @@ public final class CategoryDialog extends Dialog {
         TextInput background = new TextInput(c.background).max(256).placeholder(Component.translatable("skill_atlas.ui.category.background.placeholder"));
         background.valid = s -> s.isBlank() || Json.validResource(Json.normalizeResource(s));
         background.onChange = s -> c.background = s.trim();
-        inputs.add(f.row(Component.translatable("skill_atlas.ui.field.background"), background));
+        inputs.add(background);
+        Button pickBackground = new Button(Component.translatable("skill_atlas.ui.pick"), () -> stack.push(PickerDialog.textures(picked -> {
+            c.background = picked;
+            background.setText(picked);
+        })));
+        f.cells(Component.translatable("skill_atlas.ui.field.background"), new float[]{7, 2.4F}, background, pickBackground);
         Checkbox tile = new Checkbox(Component.translatable("skill_atlas.ui.field.tile"), c.tile, v -> c.tile = v);
         f.row(Component.empty(), tile);
         NodeEditorDialog.hint(f, Component.translatable("skill_atlas.ui.category.background.hint"), Theme.DIM);

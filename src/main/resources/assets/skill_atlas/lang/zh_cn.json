@@ -345,7 +345,7 @@
   "skill_atlas.ui.category.edit": "编辑分类：%s",
   "skill_atlas.ui.category.hint": "分类中的技能都消耗所选点数池的点数",
   "skill_atlas.ui.category.background.placeholder": "留空使用默认背景",
-  "skill_atlas.ui.category.background.hint": "填写贴图路径，例如 minecraft:textures/block/deepslate.png，或资源包中的 skill_atlas:textures/gui/backgrounds/combat.png。不平铺时图片按比例铺满画布并居中裁剪；路径无效时使用默认背景。",
+  "skill_atlas.ui.category.background.hint": "点“选择”浏览所有资源包中的贴图，也可以手动填写路径。不平铺时图片按比例铺满画布并居中裁剪；路径无效时使用默认背景。",
   "skill_atlas.ui.category.no_pools": "请先在“技能点”中创建一个点数池",
   "skill_atlas.ui.category_progress": "已学习 %s / %s",
   "skill_atlas.ui.category_pool": "点数池：%s",
@@ -382,6 +382,9 @@
   "skill_atlas.ui.rule.preview": "%s → 获得 %s 点%s",
 
   "skill_atlas.ui.pick.item": "选择物品",
+  "skill_atlas.ui.pick.all_items": "全部物品",
+  "skill_atlas.ui.pick.inventory_items": "背包物品",
+  "skill_atlas.ui.pick.texture": "选择贴图",
   "skill_atlas.ui.pick.block": "选择方块",
   "skill_atlas.ui.pick.entity": "选择生物",
   "skill_atlas.ui.pick.attribute": "选择属性",
@@ -393,7 +396,7 @@
 
   "skill_atlas.ui.icon_type.item": "物品",
   "skill_atlas.ui.icon_type.texture": "贴图",
-  "skill_atlas.ui.icon_type.texture.hint": "填写完整贴图路径，例如 minecraft:textures/item/apple.png",
+  "skill_atlas.ui.icon_type.texture.hint": "点“选择”浏览所有资源包中的贴图，或填写完整贴图路径，例如 minecraft:textures/item/apple.png",
 
   "skill_atlas.ui.requirement.all": "需要全部前置",
   "skill_atlas.ui.requirement.any": "需要任一前置",
