@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 
 public final class Json {
     public static final Gson PRETTY = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
-    public static final Gson COMPACT = new GsonBuilder().disableHtmlEscaping().create();
+    public static final Gson COMPACT = new GsonBuilder().serializeNulls().disableHtmlEscaping().create();
     private static final Pattern ID = Pattern.compile("[a-z0-9_.\\-]{1,64}");
     private static final Pattern RESOURCE = Pattern.compile("[a-z0-9_.\\-]+:[a-z0-9_.\\-/]+");
 

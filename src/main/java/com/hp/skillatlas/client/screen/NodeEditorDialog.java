@@ -29,14 +29,9 @@ import com.hp.skillatlas.data.Json;
 import com.hp.skillatlas.data.Texts;
 import com.hp.skillatlas.data.Prerequisite;
 import com.hp.skillatlas.data.Reward;
-import com.hp.skillatlas.data.RewardOperation;
-import com.hp.skillatlas.data.RewardType;
 import com.hp.skillatlas.data.SkillLevel;
 import com.hp.skillatlas.data.SkillNode;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.IForgeRegistry;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -45,8 +40,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.DoubleConsumer;
-import java.util.function.IntConsumer;
 
 public final class NodeEditorDialog extends Dialog {
     private enum Kind {
@@ -128,11 +121,6 @@ public final class NodeEditorDialog extends Dialog {
         f.full(l, l.h);
     }
 
-    private static boolean registered(IForgeRegistry<?> registry, String id) {
-        ResourceLocation rl = ResourceLocation.tryParse(Json.normalizeResource(id));
-        return rl != null && registry.containsKey(rl);
-    }
-
     private void touch(Section s) {
         if (kind == Kind.BATCH && applied.add(s)) {
             Checkbox cb = applyBoxes.get(s);
@@ -174,34 +162,6 @@ public final class NodeEditorDialog extends Dialog {
         TextInput t = new TextInput(value).max(max);
         t.onChange = v -> {
             set.accept(v);
-            touch(s);
-        };
-        inputs.add(t);
-        return t;
-    }
-
-    private TextInput intField(int value, int min, int max, Section s, IntConsumer set) {
-        TextInput t = new TextInput(String.valueOf(value)).max(11).filter(v -> v.matches("-?\\d*"));
-        t.valid = v -> parseInt(v, min, max) != null;
-        t.onChange = v -> {
-            Integer p = parseInt(v, min, max);
-            if (p != null) {
-                set.accept(p);
-            }
-            touch(s);
-        };
-        inputs.add(t);
-        return t;
-    }
-
-    private TextInput doubleField(double value, double min, double max, Section s, DoubleConsumer set) {
-        TextInput t = new TextInput(Json.trim(value)).max(24).filter(v -> v.matches("-?\\d*(\\.\\d*)?([eE]-?\\d*)?"));
-        t.valid = v -> parseDouble(v, min, max) != null;
-        t.onChange = v -> {
-            Double p = parseDouble(v, min, max);
-            if (p != null) {
-                set.accept(p);
-            }
             touch(s);
         };
         inputs.add(t);
@@ -362,13 +322,27 @@ public final class NodeEditorDialog extends Dialog {
         f.full(addPre, 16);
 
         heading(f, Section.LEVELS, "skill_atlas.ui.editor.section.levels");
-        hint(f, Component.translatable("skill_atlas.ui.editor.levels_hint"), Theme.DIM);
         for (int i = 0; i < n.levels.size(); i++) {
             SkillLevel lv = n.levels.get(i);
             int index = i;
-            Label title = new Label(Component.translatable("skill_atlas.ui.editor.level", i + 1), Theme.GOLD);
-            Label costLabel = new Label(Component.translatable("skill_atlas.ui.field.cost"), Theme.MUTED);
-            TextInput cost = intField(lv.cost, 0, 1_000_000_000, Section.LEVELS, v -> lv.cost = v);
+            Component levelTitle = Component.translatable("skill_atlas.ui.editor.level_title", Names.node(n), i + 1);
+            Button open = new Button(Component.translatable("skill_atlas.ui.editor.level_summary", i + 1, lv.cost, lv.rewards.size(), lv.items.size()), () -> stack.push(new LevelDialog(levelTitle, lv, edited -> {
+                n.levels.set(index, edited);
+                touch(Section.LEVELS);
+                rebuild();
+            })));
+            open.tip(() -> {
+                List<Component> lines = new ArrayList<>();
+                lines.add(Component.translatable("skill_atlas.ui.editor.level", index + 1).withStyle(st -> st.withColor(0xECC873)));
+                for (Reward r : lv.rewards) {
+                    lines.add(Component.literal(" - ").append(Names.reward(r, true)));
+                }
+                for (ItemCost c : lv.items) {
+                    lines.add(Component.literal(" - ").append(Names.item(c)).append(" x" + c.count));
+                }
+                lines.add(Component.translatable("skill_atlas.ui.editor.level_open").withStyle(st -> st.withColor(0x8A93A8)));
+                return lines;
+            });
             Button up = Button.icon(Sprites.UP, Component.translatable("skill_atlas.ui.menu.move_up"), () -> {
                 n.levels.add(index - 1, n.levels.remove(index));
                 touch(Section.LEVELS);
@@ -387,29 +361,7 @@ public final class NodeEditorDialog extends Dialog {
                 rebuild();
             });
             del.enabled = n.levels.size() > 1;
-            f.cells(null, new float[]{3, 1.6F, 3, 1, 1, 1}, title, costLabel, cost, up, dup, del);
-            for (int j = 0; j < lv.rewards.size(); j++) {
-                rewardCard(f, lv, j);
-            }
-            for (int j = 0; j < lv.items.size(); j++) {
-                itemCard(f, lv, j);
-            }
-            Button addReward = new Button(Component.translatable("skill_atlas.ui.editor.add_reward"), () -> {
-                lv.rewards.add(new Reward());
-                touch(Section.LEVELS);
-                rebuild();
-            });
-            addReward.icon = Sprites.PLUS;
-            addReward.enabled = lv.rewards.size() < SkillLevel.MAX_REWARDS;
-            Button addItem = new Button(Component.translatable("skill_atlas.ui.editor.add_item"), () -> stack.push(PickerDialog.itemStacks(e -> {
-                lv.items.add(new ItemCost(e.id, 1, e.nbt));
-                touch(Section.LEVELS);
-                rebuild();
-            })));
-            addItem.icon = Sprites.PLUS;
-            addItem.enabled = lv.items.size() < SkillLevel.MAX_ITEMS;
-            f.cells(Component.empty(), new float[]{1, 1}, addReward, addItem);
-            f.gap(4);
+            f.cells(null, new float[]{9, 1, 1, 1}, open, up, dup, del);
         }
         Button addLevel = new Button(Component.translatable("skill_atlas.ui.editor.add_level"), () -> {
             n.levels.add(n.levels.get(n.levels.size() - 1).copy());
@@ -425,105 +377,6 @@ public final class NodeEditorDialog extends Dialog {
         save = new Button(Component.translatable("skill_atlas.ui.save"), this::save).style(Button.Style.PRIMARY);
         save.enabled = !saving;
         footer(cancel, save);
-    }
-
-    private void itemCard(Form f, SkillLevel lv, int j) {
-        ItemCost c = lv.items.get(j);
-        Runnable pickItem = () -> stack.push(PickerDialog.itemStacks(e -> {
-            c.item = e.id;
-            c.nbt = e.nbt;
-            touch(Section.LEVELS);
-            rebuild();
-        }));
-        ItemSlot slot = new ItemSlot(() -> new Icon(Icon.ITEM, c.item, c.nbt), pickItem);
-        TextInput count = intField(c.count, 1, ItemCost.MAX_COUNT, Section.LEVELS, v -> c.count = v);
-        count.tip(Component.translatable("skill_atlas.ui.field.item_count"));
-        Button rm = Button.icon(Sprites.TRASH, Component.translatable("skill_atlas.ui.editor.remove_item"), () -> {
-            lv.items.remove(c);
-            touch(Section.LEVELS);
-            rebuild();
-        });
-        f.cells(Component.translatable("skill_atlas.ui.editor.item", j + 1), new float[]{8.2F, 1.8F, 1}, slot, count, rm);
-    }
-
-    private void rewardCard(Form f, SkillLevel lv, int j) {
-        Reward r = lv.rewards.get(j);
-        CycleButton<RewardType> type = new CycleButton<>(List.of(RewardType.values()), r.type, Names::rewardType, v -> {
-            r.switchType(v);
-            touch(Section.LEVELS);
-            rebuild();
-        });
-        Button rm = Button.icon(Sprites.TRASH, Component.translatable("skill_atlas.ui.editor.remove_reward"), () -> {
-            lv.rewards.remove(r);
-            touch(Section.LEVELS);
-            rebuild();
-        });
-        f.cells(Component.translatable("skill_atlas.ui.editor.reward", j + 1), new float[]{8, 1}, type, rm);
-        switch (r.type) {
-            case ATTRIBUTE -> {
-                TextInput target = text(r.target, 256, Section.LEVELS, v -> r.target = Json.normalizeResource(v));
-                target.valid = v -> registered(ForgeRegistries.ATTRIBUTES, v);
-                target.tip(() -> List.of(Names.attribute(r.target)));
-                Button pick = new Button(Component.translatable("skill_atlas.ui.pick"), () -> stack.push(PickerDialog.attributes(id -> {
-                    r.target = id;
-                    touch(Section.LEVELS);
-                    rebuild();
-                })));
-                f.cells(Component.translatable("skill_atlas.ui.field.attribute"), new float[]{6, 2}, target, pick);
-                TextInput amount = doubleField(r.amount, -1.0E6D, 1.0E6D, Section.LEVELS, v -> r.amount = v);
-                CycleButton<RewardOperation> op = new CycleButton<>(List.of(RewardOperation.values()), r.operation, Names::operation, v -> {
-                    r.operation = v;
-                    touch(Section.LEVELS);
-                });
-                op.tip(() -> List.of(Names.operation(op.value()), Component.translatable("skill_atlas.operation." + op.value().key + ".desc").withStyle(s -> s.withColor(0x8A93A8))));
-                f.cells(Component.translatable("skill_atlas.ui.field.amount"), new float[]{3, 5}, amount, op);
-            }
-            case EFFECT, IMMUNITY -> {
-                TextInput target = text(r.target, 256, Section.LEVELS, v -> r.target = Json.normalizeResource(v));
-                target.valid = v -> registered(ForgeRegistries.MOB_EFFECTS, v);
-                target.tip(() -> List.of(Names.effect(r.target)));
-                Button pick = new Button(Component.translatable("skill_atlas.ui.pick"), () -> stack.push(PickerDialog.effects(id -> {
-                    r.target = id;
-                    touch(Section.LEVELS);
-                    rebuild();
-                })));
-                f.cells(Component.translatable("skill_atlas.ui.field.effect"), new float[]{6, 2}, target, pick);
-                if (r.type == RewardType.EFFECT) {
-                    TextInput amp = intField(r.amplifier + 1, 1, 256, Section.LEVELS, v -> r.amplifier = v - 1);
-                    amp.tip(Component.translatable("skill_atlas.ui.field.amplifier.desc"));
-                    TextInput dur = intField(r.duration, 1, 1_000_000, Section.LEVELS, v -> r.duration = v);
-                    dur.tip(Component.translatable("skill_atlas.ui.field.duration.desc"));
-                    TextInput interval = intField(r.interval, 1, 72_000, Section.LEVELS, v -> r.interval = v);
-                    interval.tip(Component.translatable("skill_atlas.ui.field.interval.desc"));
-                    f.cells(Component.translatable("skill_atlas.ui.field.effect_params"), new float[]{1.7F, 2, 1.7F, 2.4F, 1.7F, 2.4F},
-                            new Label(Component.translatable("skill_atlas.ui.field.amplifier"), Theme.MUTED), amp,
-                            new Label(Component.translatable("skill_atlas.ui.field.duration"), Theme.MUTED), dur,
-                            new Label(Component.translatable("skill_atlas.ui.field.interval"), Theme.MUTED), interval);
-                    Checkbox particles = new Checkbox(Component.translatable("skill_atlas.ui.field.particles"), r.particles, v -> {
-                        r.particles = v;
-                        touch(Section.LEVELS);
-                    });
-                    Checkbox icon = new Checkbox(Component.translatable("skill_atlas.ui.field.effect_icon"), r.icon, v -> {
-                        r.icon = v;
-                        touch(Section.LEVELS);
-                    });
-                    f.cells(Component.empty(), new float[]{1, 1}, particles, icon);
-                }
-            }
-            case COMMAND -> {
-                TextInput cmd = text(r.target, 1024, Section.LEVELS, v -> {
-                    String c = v.trim();
-                    if (c.startsWith("/")) {
-                        c = c.substring(1);
-                    }
-                    r.target = c;
-                });
-                cmd.placeholder(Component.translatable("skill_atlas.ui.field.command.placeholder"));
-                cmd.valid = v -> !v.isBlank();
-                f.row(Component.translatable("skill_atlas.ui.field.command"), cmd);
-                hint(f, Component.translatable("skill_atlas.ui.field.command.desc"), Theme.DIM);
-            }
-        }
     }
 
     private void applyTo(SkillNode c) {

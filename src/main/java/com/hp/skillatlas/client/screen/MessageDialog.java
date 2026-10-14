@@ -26,8 +26,8 @@ public final class MessageDialog extends Dialog {
         List<Section> out = new ArrayList<>();
         String[][] keys = {
                 {"browse", "4"},
-                {"edit", "7"},
-                {"keys", "13"},
+                {"edit", "8"},
+                {"keys", "17"},
                 {"nodes", "6"},
                 {"points", "3"}
         };

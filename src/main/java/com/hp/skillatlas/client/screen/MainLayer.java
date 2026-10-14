@@ -254,6 +254,12 @@ public final class MainLayer extends Layer {
             Component sel = Component.translatable("skill_atlas.ui.selection", ClientAtlas.SELECTION.size(), canvas.nodeCount());
             right -= Gfx.width(sel) + 10;
             Gfx.text(sel, right, fy + 2, Theme.TEAL);
+            int[] at = canvas.cursor();
+            if (at != null) {
+                Component pos = Component.translatable("skill_atlas.ui.cursor", at[0], at[1]);
+                right -= Gfx.width(pos) + 10;
+                Gfx.text(pos, right, fy + 2, Theme.MUTED);
+            }
         }
         Component line = null;
         int color = statusColor;
