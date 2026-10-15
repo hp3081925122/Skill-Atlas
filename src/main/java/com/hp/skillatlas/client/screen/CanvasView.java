@@ -24,11 +24,11 @@ import com.hp.skillatlas.data.Prerequisite;
 import com.hp.skillatlas.data.SkillNode;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.NativeImage;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import org.lwjgl.glfw.GLFW;
 
@@ -57,7 +57,7 @@ public final class CanvasView extends Widget {
     public static final float MIN_ZOOM = 0.25F;
     public static final float MAX_ZOOM = 3.0F;
     public static final int SNAP = 8;
-    public static final ResourceLocation SHAPES = SkillAtlas.id("textures/gui/shapes.png");
+    public static final Identifier SHAPES = SkillAtlas.id("textures/gui/shapes.png");
     public static final int SHAPE_CELL = 34;
     public static final int SHAPE_LOCKED = 0;
     public static final int SHAPE_AVAILABLE = 1;
@@ -67,7 +67,7 @@ public final class CanvasView extends Widget {
     public static final int SHAPE_GLOW = 5;
     public static final int SHAPE_MASK = 6;
     private static final float GRID = 32;
-    private static final ResourceLocation DEFAULT_BACKGROUND = SkillAtlas.id("textures/gui/canvas.png");
+    private static final Identifier DEFAULT_BACKGROUND = SkillAtlas.id("textures/gui/canvas.png");
 
     private final MainLayer main;
     private Mode mode = Mode.NONE;
@@ -85,7 +85,7 @@ public final class CanvasView extends Widget {
     private boolean wasSelected;
     private boolean additive;
     private final Map<String, int[]> origins = new LinkedHashMap<>();
-    private final Map<ResourceLocation, int[]> textureSizes = new HashMap<>();
+    private final Map<Identifier, int[]> textureSizes = new HashMap<>();
     private boolean moved;
     private String lastClickNode;
     private long lastClickTime;
@@ -414,7 +414,7 @@ public final class CanvasView extends Widget {
         Gfx.popClip();
     }
 
-    int[] textureSize(ResourceLocation tex) {
+    int[] textureSize(Identifier tex) {
         if (tex == null) {
             return new int[]{0, 0};
         }
@@ -442,7 +442,7 @@ public final class CanvasView extends Widget {
             if (left + width < x || top + height < y || left > x + w || top > y + h) {
                 continue;
             }
-            ResourceLocation texture = ResourceLocation.tryParse(image.texture);
+            Identifier texture = Identifier.tryParse(image.texture);
             if (textureSize(texture)[0] > 0) {
                 Gfx.texture(texture, left, top, width, height, 0xFFFFFFFF);
             } else if (ClientAtlas.editMode) {
@@ -465,11 +465,11 @@ public final class CanvasView extends Widget {
     }
 
     private void renderBackground() {
-        ResourceLocation tex = DEFAULT_BACKGROUND;
+        Identifier tex = DEFAULT_BACKGROUND;
         boolean tile = false;
         Category c = ClientAtlas.definition.categories.get(ClientAtlas.category);
         if (c != null && !c.background.isEmpty()) {
-            ResourceLocation custom = ResourceLocation.tryParse(c.background);
+            Identifier custom = Identifier.tryParse(c.background);
             if (custom != null && textureSize(custom)[0] > 0) {
                 tex = custom;
                 tile = c.tile;
@@ -795,8 +795,8 @@ public final class CanvasView extends Widget {
             return true;
         }
         long now = Util.getMillis();
-        boolean shift = Screen.hasShiftDown();
-        boolean ctrl = Screen.hasControlDown();
+        boolean shift = com.hp.skillatlas.client.ui.Ui.hasShiftDown();
+        boolean ctrl = com.hp.skillatlas.client.ui.Ui.hasControlDown();
         if (!ClientAtlas.editMode) {
             if (pressNode != null) {
                 mode = Mode.CLICK_PENDING;
@@ -909,7 +909,7 @@ public final class CanvasView extends Widget {
                 }
                 int nx = (int) Math.round(o[0] + (mx - pressX) / v.zoom);
                 int ny = (int) Math.round(o[1] + (my - pressY) / v.zoom);
-                if (!Screen.hasAltDown()) {
+                if (!com.hp.skillatlas.client.ui.Ui.hasAltDown()) {
                     nx = snap(nx);
                     ny = snap(ny);
                 }
@@ -928,8 +928,8 @@ public final class CanvasView extends Widget {
                 if (dragged && pressImage != null) {
                     int nx = (int) Math.round(imageOrigin[0] + (mx - pressX) / v.zoom);
                     int ny = (int) Math.round(imageOrigin[1] + (my - pressY) / v.zoom);
-                    pressImage.x = clampCoord(Screen.hasAltDown() ? nx : snap(nx));
-                    pressImage.y = clampCoord(Screen.hasAltDown() ? ny : snap(ny));
+                    pressImage.x = clampCoord(com.hp.skillatlas.client.ui.Ui.hasAltDown() ? nx : snap(nx));
+                    pressImage.y = clampCoord(com.hp.skillatlas.client.ui.Ui.hasAltDown() ? ny : snap(ny));
                     moved = pressImage.x != imageOrigin[0] || pressImage.y != imageOrigin[1];
                 }
             }
@@ -939,7 +939,7 @@ public final class CanvasView extends Widget {
                     double dh = (my - pressY) / v.zoom;
                     int width = Math.max(1, Math.min(CanvasImage.MAX_SIZE, (int) Math.round(imageOrigin[2] + dw)));
                     int height = Math.max(1, Math.min(CanvasImage.MAX_SIZE, (int) Math.round(imageOrigin[3] + dh)));
-                    if (Screen.hasShiftDown()) {
+                    if (com.hp.skillatlas.client.ui.Ui.hasShiftDown()) {
                         double scale = Math.abs(dw) >= Math.abs(dh) ? width / (double) imageOrigin[2] : height / (double) imageOrigin[3];
                         scale = Math.min(scale, CanvasImage.MAX_SIZE / (double) Math.max(imageOrigin[2], imageOrigin[3]));
                         width = Math.max(1, (int) Math.round(imageOrigin[2] * scale));
@@ -1013,7 +1013,7 @@ public final class CanvasView extends Widget {
             }
             case CLICK_PENDING -> {
                 if (pressNode != null && !dragged) {
-                    if (Screen.hasShiftDown() || Screen.hasControlDown()) {
+                    if (com.hp.skillatlas.client.ui.Ui.hasShiftDown() || com.hp.skillatlas.client.ui.Ui.hasControlDown()) {
                         ClientAtlas.learn(pressNode.id);
                     } else {
                         main.stack.push(new InfoDialog(pressNode.id));
@@ -1198,7 +1198,7 @@ public final class CanvasView extends Widget {
             zoomAt(cx(), cy(), zoom() / 1.25F);
             return true;
         }
-        boolean ctrl = Screen.hasControlDown();
+        boolean ctrl = com.hp.skillatlas.client.ui.Ui.hasControlDown();
         if (key == GLFW.GLFW_KEY_SPACE) {
             fit(false);
             return true;
@@ -1210,7 +1210,7 @@ public final class CanvasView extends Widget {
         List<String> cats = new ArrayList<>(ClientAtlas.definition.categories.keySet());
         if (key == GLFW.GLFW_KEY_TAB && !cats.isEmpty()) {
             int step = 1;
-            if (Screen.hasShiftDown()) {
+            if (com.hp.skillatlas.client.ui.Ui.hasShiftDown()) {
                 step = -1;
             }
             int index = Math.floorMod(cats.indexOf(ClientAtlas.category) + step, cats.size());
@@ -1270,12 +1270,12 @@ public final class CanvasView extends Widget {
         }
         if (ctrl && key == GLFW.GLFW_KEY_V) {
             int[] at = pastePoint();
-            EditActions.paste(main, at[0], at[1], !Screen.hasShiftDown());
+            EditActions.paste(main, at[0], at[1], !com.hp.skillatlas.client.ui.Ui.hasShiftDown());
             return true;
         }
         if (key == GLFW.GLFW_KEY_DELETE || key == GLFW.GLFW_KEY_BACKSPACE) {
             if (!sel.isEmpty()) {
-                EditActions.delete(main, sel, !Screen.hasShiftDown());
+                EditActions.delete(main, sel, !com.hp.skillatlas.client.ui.Ui.hasShiftDown());
             }
             return true;
         }
@@ -1299,7 +1299,7 @@ public final class CanvasView extends Widget {
             dy = 1;
         }
         if ((dx != 0 || dy != 0) && picture != null) {
-            int step = Screen.hasShiftDown() ? 1 : SNAP;
+            int step = com.hp.skillatlas.client.ui.Ui.hasShiftDown() ? 1 : SNAP;
             picture.x = clampCoord(picture.x + dx * step);
             picture.y = clampCoord(picture.y + dy * step);
             saveImage(picture);
@@ -1307,7 +1307,7 @@ public final class CanvasView extends Widget {
         }
         if ((dx != 0 || dy != 0) && !sel.isEmpty()) {
             int step = SNAP;
-            if (Screen.hasShiftDown()) {
+            if (com.hp.skillatlas.client.ui.Ui.hasShiftDown()) {
                 step = 1;
             }
             for (SkillNode n : sel) {
@@ -1328,7 +1328,7 @@ public final class CanvasView extends Widget {
         SkillNode n = nodeAt(mx, my);
         if (n != null) {
             List<Component> lines = NodeTooltip.lines(n);
-            if (ClientAtlas.editMode && InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_F1)) {
+            if (ClientAtlas.editMode && InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_F1)) {
                 lines = new ArrayList<>(lines);
                 lines.add(Component.translatable("skill_atlas.ui.debug.id", n.id).withStyle(s -> s.withColor(0x8A93A8)));
                 lines.add(Component.translatable("skill_atlas.ui.debug.pos", n.x, n.y).withStyle(s -> s.withColor(0x8A93A8)));

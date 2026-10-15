@@ -130,6 +130,10 @@ public class LayerStack {
         return Ui.focus != null && Ui.focus.chr(c, mods);
     }
 
+    public boolean codepoint(int codepoint, int mods) {
+        return Ui.focus != null && Ui.focus.codepoint(codepoint, mods);
+    }
+
     public void tick() {
         for (Layer l : new ArrayList<>(layers)) {
             l.tick();

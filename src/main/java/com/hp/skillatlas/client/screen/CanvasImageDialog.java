@@ -18,7 +18,7 @@ import com.hp.skillatlas.data.Category;
 import com.hp.skillatlas.data.EditOps;
 import com.hp.skillatlas.data.Json;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -76,7 +76,7 @@ public final class CanvasImageDialog extends Dialog {
             image.texture = path;
             texture.setText(path);
             if (create) {
-                int[] size = main.canvas.textureSize(ResourceLocation.tryParse(path));
+                int[] size = main.canvas.textureSize(Identifier.tryParse(path));
                 if (size[0] > 0 && size[1] > 0) {
                     double scale = Math.min(1, 256.0D / Math.max(size[0], size[1]));
                     image.width = Math.max(1, (int) Math.round(size[0] * scale));
@@ -94,7 +94,7 @@ public final class CanvasImageDialog extends Dialog {
         Widget preview = new Widget() {
             @Override
             public void render(float pt) {
-                ResourceLocation path = ResourceLocation.tryParse(image.texture);
+                Identifier path = Identifier.tryParse(image.texture);
                 if (path != null && main.canvas.textureSize(path)[0] > 0) {
                     float scale = Math.min((w - 8) / image.width, (h - 8) / image.height);
                     float width = image.width * scale;
@@ -129,7 +129,7 @@ public final class CanvasImageDialog extends Dialog {
             Sounds.error();
             return;
         }
-        if (main.canvas.textureSize(ResourceLocation.tryParse(image.texture))[0] <= 0) {
+        if (main.canvas.textureSize(Identifier.tryParse(image.texture))[0] <= 0) {
             setStatus(Component.translatable("skill_atlas.ui.image.missing_texture"), Theme.RED);
             return;
         }

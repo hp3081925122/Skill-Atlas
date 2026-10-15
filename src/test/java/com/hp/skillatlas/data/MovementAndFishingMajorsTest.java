@@ -43,7 +43,7 @@ class MovementAndFishingMajorsTest {
             assertEquals(1, level.cost);
             assertEquals("minecraft:emerald", level.items.get(0).item);
             assertEquals(16, level.items.get(0).count);
-            assertEquals("minecraft:generic.luck", level.rewards.get(0).target);
+            assertEquals("minecraft:luck", level.rewards.get(0).target);
             assertEquals(RewardOperation.ADD, level.rewards.get(0).operation);
             assertEquals(1, level.rewards.get(0).amount);
         }

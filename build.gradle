@@ -1,50 +1,32 @@
-buildscript {
-    repositories {
-        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
-        mavenCentral()
-    }
-    dependencies { classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT' }
-}
 plugins {
-    id 'eclipse'
-    id 'idea'
-    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.147'
 }
-apply plugin: 'org.spongepowered.mixin'
 version = project.mod_version
 group = project.mod_group_id
-base { archivesName = project.mod_id }
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+base { archivesName = "${project.mod_id}-${project.minecraft_version}-neoforge" }
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 repositories {
     mavenCentral()
     maven { url 'https://maven.aliyun.com/repository/public'; content { includeGroup 'com.github.promeg' } }
 }
-jarJar.enable()
-minecraft {
-    mappings channel: project.mapping_channel, version: project.mapping_version
-    copyIdeResources = true
+neoForge {
+    version = project.neo_version
     runs {
-        configureEach {
-            workingDirectory project.file('run')
-            property 'forge.logging.console.level', 'info'
-            property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
-            mods { "${project.mod_id}" { source sourceSets.main } }
-        }
-        client {}
-        server { args '--nogui' }
+        client { client() }
+        server { server(); programArgument '--nogui' }
+        configureEach { logLevel = org.slf4j.event.Level.INFO }
     }
+    mods { "${project.mod_id}" { sourceSet(sourceSets.main) } }
 }
-mixin {
-    add sourceSets.main, "${mod_id}.refmap.json"
-    config "${mod_id}.mixins.json"
-}
+neoForge.addModdingDependenciesTo(sourceSets.test)
 dependencies {
-    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
-    minecraft "net.minecraftforge:forge:${project.minecraft_version}-${project.forge_version}"
-    minecraftLibrary 'com.github.promeg:tinypinyin:2.0.3'
-    jarJar(group: 'com.github.promeg', name: 'tinypinyin', version: '[2.0.3,2.0.4)')
-    jarJar(group: 'org.ahocorasick', name: 'ahocorasick', version: '[0.3.0,0.3.1)')
+    jarJar(implementation('com.github.promeg:tinypinyin:2.0.3')) {
+        version { strictly '2.0.3'; prefer '2.0.3' }
+    }
+    jarJar(implementation('org.ahocorasick:ahocorasick:0.3.0')) {
+        version { strictly '0.3.0'; prefer '0.3.0' }
+    }
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testImplementation 'com.google.code.gson:gson:2.10.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
@@ -52,15 +34,11 @@ dependencies {
 tasks.named('processResources', ProcessResources).configure {
     def values = [mod_id: mod_id, mod_name: mod_name, mod_version: mod_version, mod_authors: mod_authors,
                   mod_license: mod_license, mod_description: mod_description,
-                  loader_version_range: loader_version_range, forge_version_range: forge_version_range,
+                  loader_version_range: loader_version_range, neo_version_range: neo_version_range,
                   minecraft_version_range: minecraft_version_range]
     inputs.properties values
-    filesMatching(['META-INF/mods.toml']) { expand values }
+    filesMatching('META-INF/neoforge.mods.toml') { expand values }
 }
-tasks.named('jar', Jar).configure { archiveClassifier = 'slim'; finalizedBy 'reobfJar' }
-tasks.named('jarJar').configure { archiveClassifier = ''; finalizedBy 'reobfJarJar' }
-tasks.withType(Jar).configureEach { manifest.attributes('MixinConfigs': "${mod_id}.mixins.json") }
-tasks.named('build').configure { dependsOn 'jarJar' }
 def testRuntime = sourceSets.test.runtimeClasspath
 def testBridge = new File(gradle.gradleUserHomeDir, "caches/skill-atlas-test-classpath/${Integer.toHexString(projectDir.absolutePath.hashCode())}/runtime.jar")
 tasks.register('prepareTestClasspath') {
@@ -82,4 +60,4 @@ tasks.named('test', Test).configure {
     inputs.files(testRuntime).withPropertyName('actualRuntimeClasspath').withNormalizer(ClasspathNormalizer)
     classpath = files(testBridge)
 }
-tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8'; options.compilerArgs += ['-Xmaxerrs', '1000'] }

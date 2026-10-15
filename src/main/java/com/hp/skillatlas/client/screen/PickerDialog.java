@@ -15,8 +15,10 @@ import com.hp.skillatlas.client.ui.Theme;
 import com.hp.skillatlas.client.ui.Ui;
 import com.hp.skillatlas.data.Category;
 import com.hp.skillatlas.data.SkillNode;
-import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.advancements.Advancement;
+import org.joml.Matrix3x2fStack;
+import net.minecraft.advancements.AdvancementNode;
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
@@ -24,7 +26,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -34,9 +36,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.common.ForgeSpawnEggItem;
-import net.minecraftforge.fml.ModList;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.fml.ModList;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -96,8 +97,8 @@ public final class PickerDialog extends Dialog {
     private final List<Mode> modes;
     private final String memory;
     private final Consumer<Entry> onPick;
-    private final Set<ResourceLocation> thumbs = new HashSet<>();
-    private final Map<ResourceLocation, int[]> thumbSizes = new HashMap<>();
+    private final Map<Identifier, net.minecraft.client.renderer.texture.AbstractTexture> thumbs = new HashMap<>();
+    private final Map<Identifier, int[]> thumbSizes = new HashMap<>();
     private List<Entry> all;
     private int mode;
     private int rowHeight = 18;
@@ -120,7 +121,7 @@ public final class PickerDialog extends Dialog {
         this.all = modes.get(mode).entries();
     }
 
-    private static Component modName(ResourceLocation id) {
+    private static Component modName(Identifier id) {
         return MOD_NAMES.computeIfAbsent(id.getNamespace(), ns -> {
             String name = ModList.get().getModContainerById(ns).map(c -> c.getModInfo().getDisplayName()).orElse(ns);
             return Component.literal(name).withStyle(s -> s.withColor(0x7FA8FF));
@@ -141,13 +142,13 @@ public final class PickerDialog extends Dialog {
 
     public static PickerDialog itemStacks(Consumer<Entry> onPick) {
         List<Entry> all = new ArrayList<>();
-        for (Map.Entry<ResourceKey<Item>, Item> e : ForgeRegistries.ITEMS.getEntries()) {
+        for (Map.Entry<ResourceKey<Item>, Item> e : BuiltInRegistries.ITEM.entrySet()) {
             Item item = e.getValue();
             if (item == Items.AIR) {
                 continue;
             }
-            ResourceLocation id = e.getKey().location();
-            all.add(new Entry(id.toString(), item.getDescription(), stackIcon(new ItemStack(item)), modName(id)));
+            Identifier id = e.getKey().identifier();
+            all.add(new Entry(id.toString(), new ItemStack(item).getHoverName(), stackIcon(new ItemStack(item)), modName(id)));
         }
         List<Entry> owned = new ArrayList<>();
         Set<String> seen = new HashSet<>();
@@ -159,13 +160,13 @@ public final class PickerDialog extends Dialog {
                 if (stack.isEmpty()) {
                     continue;
                 }
-                ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+                Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
                 if (id == null) {
                     continue;
                 }
                 String nbt = "";
-                if (stack.getTag() != null) {
-                    nbt = stack.getTag().toString();
+                if (!stack.getComponentsPatch().isEmpty()) {
+                    nbt = com.hp.skillatlas.StackComponents.tag(stack).toString();
                 }
                 if (!seen.add(id + nbt)) {
                     continue;
@@ -180,12 +181,12 @@ public final class PickerDialog extends Dialog {
     }
 
     public static PickerDialog textures(Consumer<String> onPick) {
-        List<ResourceLocation> ids = new ArrayList<>(Minecraft.getInstance().getResourceManager().listResources("textures", rl -> rl.getPath().endsWith(".png")).keySet());
-        ids.sort(Comparator.comparing(ResourceLocation::toString));
+        List<Identifier> ids = new ArrayList<>(Minecraft.getInstance().getResourceManager().listResources("textures", rl -> rl.getPath().endsWith(".png")).keySet());
+        ids.sort(Comparator.comparing(Identifier::toString));
         List<Entry> out = new ArrayList<>(ids.size());
         PickerDialog d = new PickerDialog(Component.translatable("skill_atlas.ui.pick.texture"), List.of(new Mode(Component.empty(), out)), "textures", e -> onPick.accept(e.id));
         d.grid(38);
-        for (ResourceLocation rl : ids) {
+        for (Identifier rl : ids) {
             String path = rl.getPath().substring("textures/".length());
             out.add(new Entry(rl.toString(), Component.literal(rl.getNamespace() + ":" + path), (x, y, size) -> d.thumb(rl, x, y, size), modName(rl)));
         }
@@ -199,7 +200,7 @@ public final class PickerDialog extends Dialog {
         return this;
     }
 
-    private int[] pngSize(ResourceLocation rl) {
+    private int[] pngSize(Identifier rl) {
         try (InputStream in = Minecraft.getInstance().getResourceManager().open(rl)) {
             byte[] head = in.readNBytes(24);
             if (head.length == 24) {
@@ -216,9 +217,11 @@ public final class PickerDialog extends Dialog {
         return new int[]{1, 1};
     }
 
-    private void thumb(ResourceLocation rl, float x, float y, float size) {
-        if (Minecraft.getInstance().getTextureManager().getTexture(rl, null) == null) {
-            thumbs.add(rl);
+    private void thumb(Identifier rl, float x, float y, float size) {
+        var manager = Minecraft.getInstance().getTextureManager();
+        var loaded = ((com.hp.skillatlas.mixin.TextureManagerAccess) manager).skillAtlas$textures();
+        if (!loaded.containsKey(rl)) {
+            thumbs.put(rl, manager.getTexture(rl));
         }
         int[] sz = thumbSizes.computeIfAbsent(rl, this::pngSize);
         float w = sz[0];
@@ -237,17 +240,21 @@ public final class PickerDialog extends Dialog {
     @Override
     public void onClosed() {
         super.onClosed();
-        for (ResourceLocation rl : thumbs) {
-            Minecraft.getInstance().getTextureManager().release(rl);
-        }
+        var manager = Minecraft.getInstance().getTextureManager();
+        var loaded = ((com.hp.skillatlas.mixin.TextureManagerAccess) manager).skillAtlas$textures();
+        thumbs.forEach((id, texture) -> {
+            if (loaded.get(id) == texture) {
+                manager.release(id);
+            }
+        });
         thumbs.clear();
     }
 
     public static PickerDialog blocks(Consumer<String> onPick) {
         List<Entry> out = new ArrayList<>();
-        for (Map.Entry<ResourceKey<Block>, Block> e : ForgeRegistries.BLOCKS.getEntries()) {
+        for (Map.Entry<ResourceKey<Block>, Block> e : BuiltInRegistries.BLOCK.entrySet()) {
             Block block = e.getValue();
-            ResourceLocation id = e.getKey().location();
+            Identifier id = e.getKey().identifier();
             if (id.getPath().equals("air")) {
                 continue;
             }
@@ -262,13 +269,13 @@ public final class PickerDialog extends Dialog {
 
     public static PickerDialog entities(Consumer<String> onPick) {
         List<Entry> out = new ArrayList<>();
-        for (Map.Entry<ResourceKey<EntityType<?>>, EntityType<?>> e : ForgeRegistries.ENTITY_TYPES.getEntries()) {
+        for (Map.Entry<ResourceKey<EntityType<?>>, EntityType<?>> e : BuiltInRegistries.ENTITY_TYPE.entrySet()) {
             EntityType<?> type = e.getValue();
-            ResourceLocation id = e.getKey().location();
+            Identifier id = e.getKey().identifier();
             IconDrawer icon = spriteIcon(Sprites.TARGET);
-            SpawnEggItem egg = ForgeSpawnEggItem.fromEntityType(type);
-            if (egg != null) {
-                icon = stackIcon(new ItemStack(egg));
+            var egg = SpawnEggItem.byId(type);
+            if (egg.isPresent()) {
+                icon = stackIcon(new ItemStack(egg.get().value()));
             }
             out.add(new Entry(id.toString(), type.getDescription(), icon, modName(id)));
         }
@@ -277,8 +284,8 @@ public final class PickerDialog extends Dialog {
 
     public static PickerDialog attributes(Consumer<String> onPick) {
         List<Entry> out = new ArrayList<>();
-        for (Map.Entry<ResourceKey<Attribute>, Attribute> e : ForgeRegistries.ATTRIBUTES.getEntries()) {
-            ResourceLocation id = e.getKey().location();
+        for (Map.Entry<ResourceKey<Attribute>, Attribute> e : BuiltInRegistries.ATTRIBUTE.entrySet()) {
+            Identifier id = e.getKey().identifier();
             out.add(new Entry(id.toString(), Component.translatable(e.getValue().getDescriptionId()), spriteIcon(Sprites.STAR), modName(id)));
         }
         return new PickerDialog(Component.translatable("skill_atlas.ui.pick.attribute"), out, onPick);
@@ -286,18 +293,18 @@ public final class PickerDialog extends Dialog {
 
     public static PickerDialog effects(Consumer<String> onPick) {
         List<Entry> out = new ArrayList<>();
-        for (Map.Entry<ResourceKey<MobEffect>, MobEffect> e : ForgeRegistries.MOB_EFFECTS.getEntries()) {
+        for (Map.Entry<ResourceKey<MobEffect>, MobEffect> e : BuiltInRegistries.MOB_EFFECT.entrySet()) {
             MobEffect effect = e.getValue();
-            ResourceLocation id = e.getKey().location();
+            Identifier id = e.getKey().identifier();
             IconDrawer icon = (x, y, size) -> {
-                TextureAtlasSprite sprite = Minecraft.getInstance().getMobEffectTextures().get(effect);
+                Identifier sprite = Gui.getMobEffectSprite(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effect));
                 Gfx.flush();
-                PoseStack pose = Gfx.pose();
-                pose.pushPose();
-                pose.translate(x, y, 0);
-                pose.scale(size / 18.0F, size / 18.0F, 1.0F);
-                Gfx.graphics().blit(0, 0, 0, 18, 18, sprite);
-                pose.popPose();
+                Matrix3x2fStack pose = Gfx.pose();
+                pose.pushMatrix();
+                pose.translate(x, y);
+                pose.scale(size / 18.0F, size / 18.0F);
+                Gfx.graphics().blitSprite(RenderPipelines.GUI_TEXTURED, sprite, 0, 0, 18, 18);
+                pose.popMatrix();
             };
             out.add(new Entry(id.toString(), effect.getDisplayName(), icon, modName(id)));
         }
@@ -308,11 +315,13 @@ public final class PickerDialog extends Dialog {
         List<Entry> out = new ArrayList<>();
         ClientPacketListener conn = Minecraft.getInstance().getConnection();
         if (conn != null) {
-            for (Advancement a : conn.getAdvancements().getAdvancements().getAllAdvancements()) {
-                if (a.getDisplay() == null) {
+            for (AdvancementNode node : conn.getAdvancements().getTree().nodes()) {
+                var a = node.holder();
+                var display = a.value().display().orElse(null);
+                if (display == null) {
                     continue;
                 }
-                out.add(new Entry(a.getId().toString(), a.getDisplay().getTitle(), stackIcon(a.getDisplay().getIcon()), modName(a.getId())));
+                out.add(new Entry(a.id().toString(), display.getTitle(), stackIcon(display.getIcon().create()), modName(a.id())));
             }
         }
         out.sort(Comparator.comparing(e -> e.id));
@@ -323,8 +332,8 @@ public final class PickerDialog extends Dialog {
         List<Entry> out = new ArrayList<>();
         ClientPacketListener conn = Minecraft.getInstance().getConnection();
         if (conn != null) {
-            Optional<? extends Registry<T>> reg = conn.registryAccess().registry(registry);
-            reg.ifPresent(r -> r.getTagNames().forEach(tag -> {
+            Optional<? extends Registry<T>> reg = conn.registryAccess().lookup(registry);
+            reg.ifPresent(r -> r.getTags().map(net.minecraft.core.HolderSet.Named::key).forEach(tag -> {
                 String id = "#" + tag.location();
                 out.add(new Entry(id, Names.tag(id), spriteIcon(Sprites.FOLDER), modName(tag.location())));
             }));

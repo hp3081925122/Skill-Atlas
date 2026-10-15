@@ -14,20 +14,21 @@ import com.hp.skillatlas.data.RewardOperation;
 import com.hp.skillatlas.data.RuleType;
 import com.hp.skillatlas.data.SkillNode;
 import com.hp.skillatlas.data.Texts;
-import net.minecraft.advancements.Advancement;
+import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientAdvancements;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -98,16 +99,16 @@ public final class Names {
         return out;
     }
 
-    private static ResourceLocation rl(String id) {
-        ResourceLocation r = ResourceLocation.tryParse(id);
+    private static Identifier rl(String id) {
+        Identifier r = Identifier.tryParse(id);
         if (r == null) {
-            return new ResourceLocation("minecraft", "air");
+            return Identifier.fromNamespaceAndPath("minecraft", "air");
         }
         return r;
     }
 
     public static MutableComponent attribute(String id) {
-        Attribute a = ForgeRegistries.ATTRIBUTES.getValue(rl(id));
+        Attribute a = BuiltInRegistries.ATTRIBUTE.getValue(rl(id));
         if (a == null) {
             return Component.literal(id);
         }
@@ -115,7 +116,7 @@ public final class Names {
     }
 
     public static MutableComponent effect(String id) {
-        MobEffect e = ForgeRegistries.MOB_EFFECTS.getValue(rl(id));
+        MobEffect e = BuiltInRegistries.MOB_EFFECT.getValue(rl(id));
         if (e == null) {
             return Component.literal(id);
         }
@@ -132,32 +133,32 @@ public final class Names {
         if (id.startsWith("#")) {
             return tag(id);
         }
-        ResourceLocation r = rl(id);
+        Identifier r = rl(id);
         switch (type.targets) {
             case ENTITY -> {
-                EntityType<?> t = ForgeRegistries.ENTITY_TYPES.getValue(r);
-                if (t != null && ForgeRegistries.ENTITY_TYPES.containsKey(r)) {
+                EntityType<?> t = BuiltInRegistries.ENTITY_TYPE.getValue(r);
+                if (t != null && BuiltInRegistries.ENTITY_TYPE.containsKey(r)) {
                     return t.getDescription().copy();
                 }
             }
             case BLOCK -> {
-                Block b = ForgeRegistries.BLOCKS.getValue(r);
-                if (b != null && ForgeRegistries.BLOCKS.containsKey(r)) {
+                Block b = BuiltInRegistries.BLOCK.getValue(r);
+                if (b != null && BuiltInRegistries.BLOCK.containsKey(r)) {
                     return b.getName();
                 }
             }
             case ITEM -> {
-                Item i = ForgeRegistries.ITEMS.getValue(r);
-                if (i != null && ForgeRegistries.ITEMS.containsKey(r)) {
-                    return i.getDescription().copy();
+                Item i = BuiltInRegistries.ITEM.getValue(r);
+                if (i != null && BuiltInRegistries.ITEM.containsKey(r)) {
+                    return new ItemStack(i).getHoverName().copy();
                 }
             }
             case ADVANCEMENT -> {
                 if (Minecraft.getInstance().getConnection() != null) {
                     ClientAdvancements adv = Minecraft.getInstance().getConnection().getAdvancements();
-                    Advancement a = adv.getAdvancements().get(r);
-                    if (a != null && a.getDisplay() != null) {
-                        return a.getDisplay().getTitle().copy();
+                    AdvancementHolder a = adv.get(r);
+                    if (a != null && a.value().display().isPresent()) {
+                        return a.value().display().orElseThrow().getTitle().copy();
                     }
                 }
             }

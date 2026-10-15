@@ -4,18 +4,18 @@ import com.hp.skillatlas.client.ui.Gfx;
 import com.hp.skillatlas.data.Icon;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.nbt.TagParser;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public final class Icons {
     private static final Map<String, ItemStack> STACKS = new HashMap<>();
-    private static final Map<String, ResourceLocation> TEXTURES = new HashMap<>();
+    private static final Map<String, Identifier> TEXTURES = new HashMap<>();
 
     private Icons() {
     }
@@ -25,10 +25,10 @@ public final class Icons {
             STACKS.clear();
         }
         return STACKS.computeIfAbsent(icon.key(), k -> {
-            ResourceLocation rl = ResourceLocation.tryParse(icon.id);
+            Identifier rl = Identifier.tryParse(icon.id);
             Item item = null;
             if (rl != null) {
-                item = ForgeRegistries.ITEMS.getValue(rl);
+                item = BuiltInRegistries.ITEM.getValue(rl);
             }
             if (item == null || item == Items.AIR) {
                 return new ItemStack(Items.BARRIER);
@@ -36,8 +36,8 @@ public final class Icons {
             ItemStack stack = new ItemStack(item);
             if (!icon.nbt.isEmpty()) {
                 try {
-                    stack.setTag(TagParser.parseTag(icon.nbt));
-                } catch (CommandSyntaxException ignored) {
+                    com.hp.skillatlas.StackComponents.apply(stack, icon.nbt);
+                } catch (RuntimeException ignored) {
                 }
             }
             return stack;
@@ -46,10 +46,10 @@ public final class Icons {
 
     public static void draw(Icon icon, float x, float y, float size) {
         if (icon.isTexture()) {
-            ResourceLocation rl = TEXTURES.computeIfAbsent(icon.id, k -> {
-                ResourceLocation r = ResourceLocation.tryParse(k);
+            Identifier rl = TEXTURES.computeIfAbsent(icon.id, k -> {
+                Identifier r = Identifier.tryParse(k);
                 if (r == null) {
-                    return new ResourceLocation("minecraft", "textures/item/barrier.png");
+                    return Identifier.fromNamespaceAndPath("minecraft", "textures/item/barrier.png");
                 }
                 return r;
             });

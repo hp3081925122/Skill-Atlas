@@ -22,11 +22,6 @@ import java.util.List;
 
 @Mixin(Block.class)
 public abstract class BlockHarvestMixin {
-    @Redirect(method = "dropResources(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/entity/BlockEntity;Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/item/ItemStack;Z)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/Block;getDrops(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/entity/BlockEntity;Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/item/ItemStack;)Ljava/util/List;"))
-    private static List<ItemStack> skillAtlas$farmingDrops(BlockState state, ServerLevel level, BlockPos pos, BlockEntity blockEntity, Entity entity, ItemStack tool) {
-        return FarmingBonuses.drops(state, level, pos, entity, Block.getDrops(state, level, pos, blockEntity, entity, tool));
-    }
-
     @Inject(method = "playerDestroy", at = @At("TAIL"))
     private void skillAtlas$harvest(Level level, Player player, BlockPos pos, BlockState state, BlockEntity blockEntity, ItemStack tool, CallbackInfo ci) {
         if (player instanceof ServerPlayer serverPlayer) {

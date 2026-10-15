@@ -1,66 +1,65 @@
 package com.hp.skillatlas.client.ui;
 
 import com.hp.skillatlas.SkillAtlas;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.BufferUploader;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
+import net.minecraft.client.gui.render.TextureSetup;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.state.gui.GuiElementRenderState;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
-import org.joml.Matrix4f;
-import org.lwjgl.opengl.GL11;
+import org.joml.Matrix3x2fStack;
+import org.joml.Vector2f;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
 
 public final class Gfx {
-    public static final ResourceLocation ATLAS = SkillAtlas.id("textures/gui/atlas.png");
+    public static final Identifier ATLAS = SkillAtlas.id("textures/gui/atlas.png");
+    public static final RenderPipeline COLOR_PIPELINE = RenderPipeline.builder(RenderPipelines.GUI_SNIPPET)
+            .withLocation(SkillAtlas.id("pipeline/gui")).withCull(false).build();
+    public static final RenderPipeline TEXTURE_PIPELINE = RenderPipeline.builder(RenderPipelines.GUI_TEXTURED_SNIPPET)
+            .withLocation(SkillAtlas.id("pipeline/gui_textured")).withCull(false).build();
     private static final int NONE = 0;
     private static final int COLOR = 1;
     private static final int TEX = 2;
-    private static final float TEXT_Z = 300.0F;
-
-    private static final BufferBuilder BUF = new BufferBuilder(1 << 16);
-    private static final Deque<int[]> CLIPS = new ArrayDeque<>();
-    private static GuiGraphics g;
+    private static final List<Vertex> VERTICES = new ArrayList<>();
+    private static int clipDepth;
+    private static GuiGraphicsExtractor g;
     private static double scale = 1.0D;
     private static int mode = NONE;
-    private static ResourceLocation texture = ATLAS;
+    private static Identifier texture = ATLAS;
 
     private Gfx() {
     }
 
-    public static void begin(GuiGraphics graphics, double uiScale) {
+    public static void begin(GuiGraphicsExtractor graphics, double uiScale) {
         g = graphics;
         scale = uiScale;
         mode = NONE;
-        CLIPS.clear();
+        clipDepth = 0;
     }
 
     public static void end() {
         flush();
-        if (!CLIPS.isEmpty()) {
-            CLIPS.clear();
-            RenderSystem.disableScissor();
+        while (clipDepth > 0) {
+            g.disableScissor();
+            clipDepth--;
         }
         g = null;
     }
 
-    public static GuiGraphics graphics() {
+    public static GuiGraphicsExtractor graphics() {
         return g;
     }
 
-    public static PoseStack pose() {
+    public static Matrix3x2fStack pose() {
         return g.pose();
     }
 
@@ -72,62 +71,79 @@ public final class Gfx {
         return scale;
     }
 
-    private static void ensure(int m, ResourceLocation tex) {
+    private static void ensure(int m, Identifier tex) {
         if (mode == m && (m != TEX || texture.equals(tex))) {
             return;
         }
         flush();
         mode = m;
-        if (m == COLOR) {
-            BUF.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-        } else {
+        if (m == TEX) {
             texture = tex;
-            BUF.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR_TEX);
         }
     }
 
     public static void flush() {
-        if (mode == NONE) {
+        if (mode == NONE || VERTICES.isEmpty()) {
+            mode = NONE;
             return;
         }
-        int m = mode;
-        mode = NONE;
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.disableDepthTest();
-        RenderSystem.disableCull();
-        if (m == COLOR) {
-            RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        } else {
-            RenderSystem.setShader(GameRenderer::getPositionColorTexShader);
-            RenderSystem.setShaderTexture(0, texture);
+        float minX = Float.POSITIVE_INFINITY;
+        float minY = Float.POSITIVE_INFINITY;
+        float maxX = Float.NEGATIVE_INFINITY;
+        float maxY = Float.NEGATIVE_INFINITY;
+        for (Vertex v : VERTICES) {
+            minX = Math.min(minX, v.x);
+            minY = Math.min(minY, v.y);
+            maxX = Math.max(maxX, v.x);
+            maxY = Math.max(maxY, v.y);
         }
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        BufferUploader.drawWithShader(BUF.end());
-        RenderSystem.enableCull();
-        RenderSystem.enableDepthTest();
+        ScreenRectangle clip = g.peekScissorStack();
+        ScreenRectangle bounds = new ScreenRectangle((int) Math.floor(minX), (int) Math.floor(minY),
+                Math.max(1, (int) Math.ceil(maxX) - (int) Math.floor(minX)), Math.max(1, (int) Math.ceil(maxY) - (int) Math.floor(minY)));
+        if (clip != null) {
+            bounds = bounds.intersection(clip);
+        }
+        TextureSetup setup = TextureSetup.noTexture();
+        if (mode == TEX) {
+            var image = Minecraft.getInstance().getTextureManager().getTexture(texture);
+            setup = TextureSetup.singleTexture(image.getTextureView(), image.getSampler());
+        }
+        g.submitGuiElementRenderState(new Geometry(List.copyOf(VERTICES), mode == TEX ? TEXTURE_PIPELINE : COLOR_PIPELINE, setup, clip, bounds));
+        VERTICES.clear();
+        mode = NONE;
+    }
+
+    private record Vertex(float x, float y, float u, float v, int color) {
+    }
+
+    private record Geometry(List<Vertex> vertices, RenderPipeline pipeline, TextureSetup textureSetup,
+                            ScreenRectangle scissorArea, ScreenRectangle bounds) implements GuiElementRenderState {
+        @Override
+        public void buildVertices(VertexConsumer consumer) {
+            for (Vertex v : vertices) {
+                var vertex = consumer.addVertex(v.x, v.y, 0).setColor(v.color);
+                if (pipeline == TEXTURE_PIPELINE) {
+                    vertex.setUv(v.u, v.v);
+                }
+            }
+        }
+    }
+
+    private static void vertex(float x, float y, float u, float v, int color) {
+        Vector2f p = g.pose().transformPosition(x, y, new Vector2f());
+        VERTICES.add(new Vertex(p.x, p.y, u, v, color));
     }
 
     public static void clearDepth() {
         flush();
-        RenderSystem.depthMask(true);
-        RenderSystem.clear(GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
+        g.nextStratum();
     }
 
     public static void fill(float x, float y, float w, float h, int argb) {
         if (w <= 0 || h <= 0 || (argb >>> 24) == 0) {
             return;
         }
-        ensure(COLOR, null);
-        Matrix4f m = g.pose().last().pose();
-        int a = argb >>> 24;
-        int r = (argb >> 16) & 0xFF;
-        int gr = (argb >> 8) & 0xFF;
-        int b = argb & 0xFF;
-        BUF.vertex(m, x, y, 0).color(r, gr, b, a).endVertex();
-        BUF.vertex(m, x, y + h, 0).color(r, gr, b, a).endVertex();
-        BUF.vertex(m, x + w, y + h, 0).color(r, gr, b, a).endVertex();
-        BUF.vertex(m, x + w, y, 0).color(r, gr, b, a).endVertex();
+        quad(x, y, x, y + h, x + w, y + h, x + w, y, argb);
     }
 
     public static void outline(float x, float y, float w, float h, float t, int argb) {
@@ -155,15 +171,10 @@ public final class Gfx {
 
     private static void quad(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, int argb) {
         ensure(COLOR, null);
-        Matrix4f m = g.pose().last().pose();
-        int a = argb >>> 24;
-        int r = (argb >> 16) & 0xFF;
-        int gr = (argb >> 8) & 0xFF;
-        int b = argb & 0xFF;
-        BUF.vertex(m, x1, y1, 0).color(r, gr, b, a).endVertex();
-        BUF.vertex(m, x2, y2, 0).color(r, gr, b, a).endVertex();
-        BUF.vertex(m, x3, y3, 0).color(r, gr, b, a).endVertex();
-        BUF.vertex(m, x4, y4, 0).color(r, gr, b, a).endVertex();
+        vertex(x1, y1, 0, 0, argb);
+        vertex(x2, y2, 0, 0, argb);
+        vertex(x3, y3, 0, 0, argb);
+        vertex(x4, y4, 0, 0, argb);
     }
 
     public static void sprite(Sprites.Sprite s, float x, float y, float w, float h) {
@@ -210,36 +221,19 @@ public final class Gfx {
     }
 
     private static void uv(float x, float y, float w, float h, float u, float v, float uw, float vh, int argb) {
-        Matrix4f m = g.pose().last().pose();
-        float u0 = u / 256.0F;
-        float v0 = v / 256.0F;
-        float u1 = (u + uw) / 256.0F;
-        float v1 = (v + vh) / 256.0F;
-        int a = argb >>> 24;
-        int r = (argb >> 16) & 0xFF;
-        int gr = (argb >> 8) & 0xFF;
-        int b = argb & 0xFF;
-        BUF.vertex(m, x, y, 0).color(r, gr, b, a).uv(u0, v0).endVertex();
-        BUF.vertex(m, x, y + h, 0).color(r, gr, b, a).uv(u0, v1).endVertex();
-        BUF.vertex(m, x + w, y + h, 0).color(r, gr, b, a).uv(u1, v1).endVertex();
-        BUF.vertex(m, x + w, y, 0).color(r, gr, b, a).uv(u1, v0).endVertex();
+        texture(texture, x, y, w, h, u / 256.0F, v / 256.0F, (u + uw) / 256.0F, (v + vh) / 256.0F, argb);
     }
 
-    public static void texture(ResourceLocation tex, float x, float y, float w, float h, int argb) {
+    public static void texture(Identifier tex, float x, float y, float w, float h, int argb) {
         texture(tex, x, y, w, h, 0, 0, 1, 1, argb);
     }
 
-    public static void texture(ResourceLocation tex, float x, float y, float w, float h, float u0, float v0, float u1, float v1, int argb) {
+    public static void texture(Identifier tex, float x, float y, float w, float h, float u0, float v0, float u1, float v1, int argb) {
         ensure(TEX, tex);
-        Matrix4f m = g.pose().last().pose();
-        int a = argb >>> 24;
-        int r = (argb >> 16) & 0xFF;
-        int gr = (argb >> 8) & 0xFF;
-        int b = argb & 0xFF;
-        BUF.vertex(m, x, y, 0).color(r, gr, b, a).uv(u0, v0).endVertex();
-        BUF.vertex(m, x, y + h, 0).color(r, gr, b, a).uv(u0, v1).endVertex();
-        BUF.vertex(m, x + w, y + h, 0).color(r, gr, b, a).uv(u1, v1).endVertex();
-        BUF.vertex(m, x + w, y, 0).color(r, gr, b, a).uv(u1, v0).endVertex();
+        vertex(x, y, u0, v0, argb);
+        vertex(x, y + h, u0, v1, argb);
+        vertex(x + w, y + h, u1, v1, argb);
+        vertex(x + w, y, u1, v0, argb);
     }
 
     public static void item(ItemStack stack, float x, float y, float size) {
@@ -247,32 +241,26 @@ public final class Gfx {
             return;
         }
         flush();
-        PoseStack p = g.pose();
-        p.pushPose();
-        p.translate(x, y, 0);
-        p.scale(size / 16.0F, size / 16.0F, 1.0F);
-        g.renderItem(stack, 0, 0);
-        p.popPose();
+        Matrix3x2fStack p = g.pose();
+        p.pushMatrix();
+        p.translate(x, y);
+        p.scale(size / 16.0F, size / 16.0F);
+        g.item(stack, 0, 0);
+        p.popMatrix();
     }
 
     public static int text(FormattedCharSequence s, float x, float y, int color, boolean shadow) {
         flush();
-        PoseStack p = g.pose();
-        p.pushPose();
-        p.translate(0, 0, TEXT_Z);
-        int w = g.drawString(font(), s, x, y, color, shadow);
-        p.popPose();
-        return w;
+        Matrix3x2fStack p = g.pose();
+        p.pushMatrix();
+        p.translate(x, y);
+        g.text(font(), s, 0, 0, color, shadow);
+        p.popMatrix();
+        return (int) (x + font().getSplitter().stringWidth(s)) + (shadow ? 1 : 0);
     }
 
     public static int text(String s, float x, float y, int color) {
-        flush();
-        PoseStack p = g.pose();
-        p.pushPose();
-        p.translate(0, 0, TEXT_Z);
-        int w = g.drawString(font(), s, x, y, color, true);
-        p.popPose();
-        return w;
+        return text(Component.literal(s).getVisualOrderText(), x, y, color, true);
     }
 
     public static int text(Component c, float x, float y, int color) {
@@ -280,12 +268,13 @@ public final class Gfx {
     }
 
     public static void textScaled(Component c, float x, float y, float s, int color) {
-        PoseStack p = g.pose();
-        p.pushPose();
-        p.translate(x, y, 0);
-        p.scale(s, s, 1.0F);
+        flush();
+        Matrix3x2fStack p = g.pose();
+        p.pushMatrix();
+        p.translate(x, y);
+        p.scale(s, s);
         text(c.getVisualOrderText(), 0, 0, color, true);
-        p.popPose();
+        p.popMatrix();
     }
 
     public static void textCentered(Component c, float cx, float y, int color) {
@@ -314,35 +303,14 @@ public final class Gfx {
 
     public static void pushClip(float x, float y, float w, float h) {
         flush();
-        int x0 = (int) Math.floor(x * scale);
-        int y0 = (int) Math.floor(y * scale);
-        int x1 = (int) Math.ceil((x + w) * scale);
-        int y1 = (int) Math.ceil((y + h) * scale);
-        int[] top = CLIPS.peek();
-        if (top != null) {
-            x0 = Math.max(x0, top[0]);
-            y0 = Math.max(y0, top[1]);
-            x1 = Math.min(x1, top[2]);
-            y1 = Math.min(y1, top[3]);
-        }
-        CLIPS.push(new int[]{x0, y0, Math.max(x0, x1), Math.max(y0, y1)});
-        applyClip();
+        g.enableScissor((int) Math.floor(x), (int) Math.floor(y), (int) Math.ceil(x + w), (int) Math.ceil(y + h));
+        clipDepth++;
     }
 
     public static void popClip() {
         flush();
-        CLIPS.pop();
-        applyClip();
-    }
-
-    private static void applyClip() {
-        int[] c = CLIPS.peek();
-        if (c == null) {
-            RenderSystem.disableScissor();
-            return;
-        }
-        int fbh = Minecraft.getInstance().getWindow().getHeight();
-        RenderSystem.enableScissor(c[0], fbh - c[3], c[2] - c[0], c[3] - c[1]);
+        g.disableScissor();
+        clipDepth--;
     }
 
     public static void tooltip(List<Component> lines, float mx, float my, float screenW, float screenH) {

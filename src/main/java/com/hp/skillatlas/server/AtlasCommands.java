@@ -30,7 +30,7 @@ public final class AtlasCommands {
     }
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(Commands.literal("skillatlas").requires(s -> s.hasPermission(2))
+        dispatcher.register(Commands.literal("skillatlas").requires(s -> s.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER))
                 .then(Commands.literal("reload").executes(c -> {
                     if (AtlasServer.reload()) {
                         c.getSource().sendSuccess(() -> Component.translatable("skill_atlas.command.reload.ok", AtlasServer.definition().nodes.size()), true);

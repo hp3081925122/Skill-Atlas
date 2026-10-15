@@ -2,7 +2,8 @@ package com.hp.skillatlas.server;
 
 import com.hp.skillatlas.SkillAtlas;
 import com.hp.skillatlas.SkillAttributes;
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.resources.ResourceKey;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.server.level.ServerPlayer;
@@ -13,14 +14,14 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
-import net.minecraftforge.common.loot.IGlobalLootModifier;
-import net.minecraftforge.common.loot.LootModifier;
+import net.neoforged.neoforge.common.loot.IGlobalLootModifier;
+import net.neoforged.neoforge.common.loot.LootModifier;
 
 public final class StoneMineralsModifier extends LootModifier {
-    public static final Codec<StoneMineralsModifier> CODEC = RecordCodecBuilder.create(inst -> codecStart(inst).apply(inst, StoneMineralsModifier::new));
+    public static final MapCodec<StoneMineralsModifier> CODEC = RecordCodecBuilder.mapCodec(inst -> codecStart(inst).apply(inst, StoneMineralsModifier::new));
 
-    public StoneMineralsModifier(LootItemCondition[] conditions) {
-        super(conditions);
+    public StoneMineralsModifier(LootItemCondition[] conditions, int priority) {
+        super(conditions, priority);
     }
 
     @Override
@@ -28,10 +29,10 @@ public final class StoneMineralsModifier extends LootModifier {
         if (FortuneModifier.isRerolling()) {
             return loot;
         }
-        BlockState state = ctx.getParamOrNull(LootContextParams.BLOCK_STATE);
+        BlockState state = ctx.getOptionalParameter(LootContextParams.BLOCK_STATE);
         if (state == null || !state.is(Blocks.STONE)
-                || !state.getBlock().getLootTable().equals(ctx.getQueriedLootTableId())
-                || !(ctx.getParamOrNull(LootContextParams.THIS_ENTITY) instanceof ServerPlayer player)
+                || state.getBlock().getLootTable().map(ResourceKey::identifier).filter(ctx.getQueriedLootTableId()::equals).isEmpty()
+                || !(ctx.getOptionalParameter(LootContextParams.THIS_ENTITY) instanceof ServerPlayer player)
                 || player.getAbilities().instabuild || player.isSpectator()) {
             return loot;
         }
@@ -51,12 +52,12 @@ public final class StoneMineralsModifier extends LootModifier {
             reward = new ItemStack(Items.DIAMOND);
         }
         loot.add(reward);
-        SkillAtlas.LOGGER.debug("Stone mineral bonus for {} at {}: {}", player.getGameProfile().getName(), ctx.getParamOrNull(LootContextParams.ORIGIN), reward);
+        SkillAtlas.LOGGER.debug("Stone mineral bonus for {} at {}: {}", player.getGameProfile().name(), ctx.getOptionalParameter(LootContextParams.ORIGIN), reward);
         return loot;
     }
 
     @Override
-    public Codec<? extends IGlobalLootModifier> codec() {
+    public MapCodec<? extends IGlobalLootModifier> codec() {
         return CODEC;
     }
 }

@@ -1,7 +1,7 @@
 package com.hp.skillatlas.client.ui;
 
 import net.minecraft.SharedConstants;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.Screen;
@@ -289,7 +289,7 @@ public class TextInput extends Widget {
             return true;
         }
         cursor = indexAtMouse(mx, my);
-        if (!Screen.hasShiftDown()) {
+        if (!com.hp.skillatlas.client.ui.Ui.hasShiftDown()) {
             anchor = cursor;
         }
         selecting = true;
@@ -343,7 +343,7 @@ public class TextInput extends Widget {
                 } else {
                     clean.append(' ');
                 }
-            } else if (SharedConstants.isAllowedChatCharacter(c)) {
+            } else if (net.minecraft.util.StringUtil.isAllowedChatCharacter(c)) {
                 clean.append(c);
             }
         }
@@ -355,7 +355,11 @@ public class TextInput extends Widget {
             return;
         }
         if (add.length() > room) {
-            add = add.substring(0, room);
+            int end = room;
+            if (end > 0 && Character.isHighSurrogate(add.charAt(end - 1)) && Character.isLowSurrogate(add.charAt(end))) {
+                end--;
+            }
+            add = add.substring(0, end);
         }
         String next = text.substring(0, selMin) + add + text.substring(selMax);
         if (filter != null && !filter.test(next)) {
@@ -444,8 +448,8 @@ public class TextInput extends Widget {
         if (!enabled) {
             return false;
         }
-        boolean ctrl = Screen.hasControlDown();
-        boolean shift = Screen.hasShiftDown();
+        boolean ctrl = com.hp.skillatlas.client.ui.Ui.hasControlDown();
+        boolean shift = com.hp.skillatlas.client.ui.Ui.hasShiftDown();
         blink = Util.getMillis();
         if (ctrl && key == GLFW.GLFW_KEY_A) {
             anchor = 0;
@@ -542,11 +546,16 @@ public class TextInput extends Widget {
 
     @Override
     public boolean chr(char c, int mods) {
+        return codepoint(c, mods);
+    }
+
+    @Override
+    public boolean codepoint(int codepoint, int mods) {
         if (!enabled) {
             return false;
         }
-        if (SharedConstants.isAllowedChatCharacter(c)) {
-            insert(String.valueOf(c));
+        if (net.minecraft.util.StringUtil.isAllowedChatCharacter(codepoint)) {
+            insert(Character.toString(codepoint));
             blink = Util.getMillis();
             return true;
         }

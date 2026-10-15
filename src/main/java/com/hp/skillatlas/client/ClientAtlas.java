@@ -211,7 +211,7 @@ public final class ClientAtlas {
 
     private static void sendSmall(byte kind) {
         for (Payload p : Payload.split(kind, new JsonObject(), Payload.TO_SERVER_CHUNK)) {
-            AtlasNetwork.CHANNEL.sendToServer(p);
+            net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(p);
         }
     }
 
@@ -230,7 +230,7 @@ public final class ClientAtlas {
             }
         });
         for (Payload p : Payload.split(Payload.EDIT, EditOps.request(id, ops), Payload.TO_SERVER_CHUNK)) {
-            AtlasNetwork.CHANNEL.sendToServer(p);
+            net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(p);
         }
         return id;
     }
@@ -379,7 +379,7 @@ public final class ClientAtlas {
     }
 
     public static void learn(String node) {
-        AtlasNetwork.CHANNEL.sendToServer(new LearnPacket(node));
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new LearnPacket(node));
     }
 
     public static List<SkillNode> nodesIn(String cat) {

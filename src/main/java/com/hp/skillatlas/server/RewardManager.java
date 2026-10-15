@@ -7,14 +7,15 @@ import com.hp.skillatlas.data.Reward;
 import com.hp.skillatlas.data.RewardType;
 import com.hp.skillatlas.data.SkillLevel;
 import com.hp.skillatlas.data.SkillNode;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -28,12 +29,12 @@ import java.util.UUID;
 public final class RewardManager {
     public static final String MODIFIER = "skill_atlas";
 
-    private record Periodic(MobEffect effect, int amplifier, int duration, int interval, int phase, boolean particles, boolean icon) {
+    private record Periodic(Holder<MobEffect> effect, int amplifier, int duration, int interval, int phase, boolean particles, boolean icon) {
     }
 
     private static final class Active {
         final List<Periodic> periodic = new ArrayList<>();
-        final Set<MobEffect> immune = new HashSet<>();
+        final Set<Holder<MobEffect>> immune = new HashSet<>();
     }
 
     private static final Map<UUID, Active> ACTIVE = new HashMap<>();
@@ -45,13 +46,13 @@ public final class RewardManager {
     public static void refresh(ServerPlayer player) {
         AtlasDefinition d = AtlasServer.definition();
         PlayerProgress p = AtlasServer.progress(player);
-        for (Attribute attribute : ForgeRegistries.ATTRIBUTES) {
-            AttributeInstance inst = player.getAttributes().getInstance(attribute);
+        for (Attribute attribute : BuiltInRegistries.ATTRIBUTE) {
+            AttributeInstance inst = player.getAttributes().getInstance(BuiltInRegistries.ATTRIBUTE.wrapAsHolder(attribute));
             if (inst == null) {
                 continue;
             }
             for (AttributeModifier m : inst.getModifiers()) {
-                if (MODIFIER.equals(m.getName())) {
+                if (m.id().getNamespace().equals(SkillAtlas.MOD_ID) && m.id().getPath().startsWith("reward/")) {
                     inst.removeModifier(m);
                 }
             }
@@ -66,20 +67,20 @@ public final class RewardManager {
             for (int i = 0; i < level.rewards.size(); i++) {
                 Reward r = level.rewards.get(i);
                 if (r.type == RewardType.ATTRIBUTE) {
-                    Attribute attribute = ForgeRegistries.ATTRIBUTES.getValue(new ResourceLocation(r.target));
+                    Attribute attribute = BuiltInRegistries.ATTRIBUTE.getValue(Identifier.parse(r.target));
                     AttributeInstance inst = null;
                     if (attribute != null) {
-                        inst = player.getAttributes().getInstance(attribute);
+                        inst = player.getAttributes().getInstance(BuiltInRegistries.ATTRIBUTE.wrapAsHolder(attribute));
                     }
                     if (inst == null) {
                         warn("attribute", r.target);
                         continue;
                     }
-                    UUID id = UUID.nameUUIDFromBytes((n.id + "#" + i).getBytes(StandardCharsets.UTF_8));
+                    Identifier id = SkillAtlas.id("reward/" + n.id + "/" + i);
                     inst.removeModifier(id);
-                    inst.addPermanentModifier(new AttributeModifier(id, MODIFIER, r.amount, operation(r)));
+                    inst.addPermanentModifier(new AttributeModifier(id, r.amount, operation(r)));
                 } else if (r.type == RewardType.EFFECT || r.type == RewardType.IMMUNITY) {
-                    MobEffect effect = ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation(r.target));
+                    Holder<MobEffect> effect = BuiltInRegistries.MOB_EFFECT.get(Identifier.parse(r.target)).orElse(null);
                     if (effect == null) {
                         warn("effect", r.target);
                         continue;
@@ -96,7 +97,7 @@ public final class RewardManager {
         if (player.getHealth() > player.getMaxHealth()) {
             player.setHealth(player.getMaxHealth());
         }
-        for (MobEffect effect : active.immune) {
+        for (Holder<MobEffect> effect : active.immune) {
             if (player.hasEffect(effect)) {
                 player.removeEffect(effect);
             }
@@ -120,7 +121,7 @@ public final class RewardManager {
         }
     }
 
-    public static boolean immune(ServerPlayer player, MobEffect effect) {
+    public static boolean immune(ServerPlayer player, Holder<MobEffect> effect) {
         Active active = ACTIVE.get(player.getUUID());
         return active != null && active.immune.contains(effect);
     }
@@ -129,9 +130,9 @@ public final class RewardManager {
         for (Reward r : level.rewards) {
             if (r.type == RewardType.COMMAND) {
                 try {
-                    player.server.getCommands().performPrefixedCommand(player.createCommandSourceStack().withPermission(2).withSuppressedOutput(), r.target);
+                    player.level().getServer().getCommands().performPrefixedCommand(player.createCommandSourceStack().withPermission(net.minecraft.server.permissions.LevelBasedPermissionSet.GAMEMASTER).withSuppressedOutput(), r.target);
                 } catch (RuntimeException e) {
-                    SkillAtlas.LOGGER.warn("Skill reward command failed for {}: {} ({})", player.getGameProfile().getName(), r.target, e.toString());
+                    SkillAtlas.LOGGER.warn("Skill reward command failed for {}: {} ({})", player.getGameProfile().name(), r.target, e.toString());
                 }
             }
         }
@@ -148,9 +149,9 @@ public final class RewardManager {
 
     private static AttributeModifier.Operation operation(Reward r) {
         return switch (r.operation) {
-            case ADD -> AttributeModifier.Operation.ADDITION;
-            case MULTIPLY_BASE -> AttributeModifier.Operation.MULTIPLY_BASE;
-            case MULTIPLY_TOTAL -> AttributeModifier.Operation.MULTIPLY_TOTAL;
+            case ADD -> AttributeModifier.Operation.ADD_VALUE;
+            case MULTIPLY_BASE -> AttributeModifier.Operation.ADD_MULTIPLIED_BASE;
+            case MULTIPLY_TOTAL -> AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL;
         };
     }
 
