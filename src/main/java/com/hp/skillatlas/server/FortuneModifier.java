@@ -95,7 +95,8 @@ public final class FortuneModifier extends LootModifier {
         ACTIVE.set(true);
         try {
             ObjectArrayList<ItemStack> rerolled = table.getRandomItems(params);
-            SkillAtlas.LOGGER.debug("Fortune attribute rerolled {} with fortune {} -> {}: {} stacks", ctx.getQueriedLootTableId(), base, base + bonus, rerolled.size());
+            SkillAtlas.LOGGER.debug("Fortune attribute rerolled {} with fortune {} -> {}: stacks={} -> {}, priority={}",
+                    ctx.getQueriedLootTableId(), base, base + bonus, loot.size(), rerolled.size(), priority());
             return rerolled;
         } finally {
             ACTIVE.set(false);

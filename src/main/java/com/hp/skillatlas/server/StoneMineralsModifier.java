@@ -52,7 +52,8 @@ public final class StoneMineralsModifier extends LootModifier {
             reward = new ItemStack(Items.DIAMOND);
         }
         loot.add(reward);
-        SkillAtlas.LOGGER.debug("Stone mineral bonus for {} at {}: {}", player.getGameProfile().name(), ctx.getOptionalParameter(LootContextParams.ORIGIN), reward);
+        SkillAtlas.LOGGER.debug("Stone mineral bonus for {} at {}: {}, priority={}, stacks={}",
+                player.getGameProfile().name(), ctx.getOptionalParameter(LootContextParams.ORIGIN), reward, priority(), loot.size());
         return loot;
     }
 
