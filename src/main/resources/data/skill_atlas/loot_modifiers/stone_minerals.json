@@ -1,4 +1,5 @@
 {
   "type": "skill_atlas:stone_minerals",
+  "priority": 0,
   "conditions": []
 }
