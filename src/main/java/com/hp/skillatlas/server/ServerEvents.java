@@ -3,14 +3,21 @@ package com.hp.skillatlas.server;
 import com.hp.skillatlas.SkillAtlas;
 import com.hp.skillatlas.SkillAttributes;
 import com.hp.skillatlas.data.RuleType;
+import com.hp.skillatlas.data.MovementMath;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.common.Tags;
+import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingExperienceDropEvent;
 import net.minecraftforge.event.entity.living.LivingHealEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LootingLevelEvent;
 import net.minecraftforge.event.entity.living.MobEffectEvent;
 import net.minecraftforge.event.entity.player.AdvancementEvent;
@@ -110,6 +117,32 @@ public final class ServerEvents {
         }
     }
 
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onJump(LivingEvent.LivingJumpEvent event) {
+        if (event.getEntity() instanceof Player player && !player.isInWater() && !player.isInLava()
+                && !player.getAbilities().flying) {
+            double height = SkillAttributes.value(player, SkillAttributes.JUMP_HEIGHT);
+            if (height > 0) {
+                var movement = player.getDeltaMovement();
+                double gravity = player.getAttributeValue(ForgeMod.ENTITY_GRAVITY.get());
+                player.setDeltaMovement(movement.x, MovementMath.jumpVelocity(movement.y, height, gravity), movement.z);
+            }
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onFallDamage(LivingHurtEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player && event.getSource().is(DamageTypeTags.IS_FALL)) {
+            double reduction = SkillAttributes.value(player, SkillAttributes.FALL_DAMAGE_REDUCTION);
+            if (reduction > 0) {
+                float original = event.getAmount();
+                event.setAmount((float) (original * Math.max(0, 1 - reduction / 100.0D)));
+                SkillAtlas.LOGGER.debug("Fall damage reduced: player={}, reduction={}, damage={} -> {}",
+                        player.getScoreboardName(), reduction, original, event.getAmount());
+            }
+        }
+    }
+
     @SubscribeEvent
     public static void onExperienceDrop(LivingExperienceDropEvent event) {
         if (event.getAttackingPlayer() instanceof ServerPlayer player && event.getDroppedExperience() > 0) {
@@ -150,6 +183,16 @@ public final class ServerEvents {
     public static void onBreak(BlockEvent.BreakEvent event) {
         if (!event.isCanceled() && event.getPlayer() instanceof ServerPlayer player) {
             PointTracker.mine(player, event.getState());
+            if (!player.getAbilities().instabuild && !player.isSpectator()
+                    && event.getState().is(Tags.Blocks.ORES) && event.getExpToDrop() > 0) {
+                double bonus = SkillAttributes.value(player, SkillAttributes.MINING_EXPERIENCE);
+                if (bonus != 0.0D) {
+                    int original = event.getExpToDrop();
+                    double scaled = Math.min(Integer.MAX_VALUE, original * Math.max(0.0D, 1.0D + bonus / 100.0D));
+                    event.setExpToDrop(SkillAttributes.roll(scaled, player.getRandom()));
+                    SkillAtlas.LOGGER.debug("Mining experience bonus for {} at {}: {} -> {}", player.getGameProfile().getName(), event.getPos(), original, event.getExpToDrop());
+                }
+            }
         }
     }
 
@@ -160,19 +203,10 @@ public final class ServerEvents {
         }
     }
 
-    @SubscribeEvent
-    public static void onSmelt(PlayerEvent.ItemSmeltedEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            PointTracker.item(player, RuleType.SMELT, event.getSmelting());
-        }
-    }
-
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onFish(ItemFishedEvent event) {
         if (!event.isCanceled() && event.getEntity() instanceof ServerPlayer player) {
-            for (ItemStack stack : event.getDrops()) {
-                PointTracker.item(player, RuleType.FISH, stack);
-            }
+            PointTracker.fish(player, event.getDrops());
         }
     }
 

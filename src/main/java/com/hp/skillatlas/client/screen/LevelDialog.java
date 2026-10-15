@@ -34,13 +34,16 @@ import java.util.function.IntConsumer;
 public final class LevelDialog extends Dialog {
     private final SkillLevel lv;
     private final Consumer<SkillLevel> onSave;
+    private final String pool;
     private final List<TextInput> inputs = new ArrayList<>();
     private ScrollGroup scroll;
 
-    public LevelDialog(Component title, SkillLevel level, Consumer<SkillLevel> onSave) {
+    public LevelDialog(Component title, SkillLevel level, String pool, Consumer<SkillLevel> onSave) {
         super(title, 420, 320);
         this.lv = level.copy();
         this.onSave = onSave;
+        this.pool = pool;
+        this.lv.experience = level.usesExperience(pool.isEmpty());
     }
 
     private static boolean registered(IForgeRegistry<?> registry, String id) {
@@ -98,7 +101,10 @@ public final class LevelDialog extends Dialog {
         scroll.bounds(contentX(), contentY(), contentW(), contentH());
         Form f = new Form(scroll, 74);
         NodeEditorDialog.hint(f, Component.translatable("skill_atlas.ui.editor.levels_hint"), Theme.DIM);
-        f.row(Component.translatable("skill_atlas.ui.field.cost"), intField(lv.cost, 0, 1_000_000_000, v -> lv.cost = v));
+        CycleButton<Boolean> costType = new CycleButton<>(List.of(false, true), lv.experience,
+                experience -> Component.translatable(experience ? "skill_atlas.ui.cost_type.experience" : "skill_atlas.ui.cost_type.points"),
+                experience -> lv.experience = experience);
+        f.cells(Component.translatable("skill_atlas.ui.field.cost"), new float[]{3.5F, 6.5F}, costType, intField(lv.cost, 0, 1_000_000_000, v -> lv.cost = v));
 
         f.heading(Component.translatable("skill_atlas.ui.level.rewards"));
         if (lv.rewards.isEmpty()) {
@@ -137,6 +143,11 @@ public final class LevelDialog extends Dialog {
     }
 
     private void confirm() {
+        if (!lv.experience && pool.isEmpty() && lv.cost > 0) {
+            setStatus(Component.translatable("skill_atlas.ui.level.no_pool"), Theme.RED);
+            Sounds.error();
+            return;
+        }
         for (TextInput t : inputs) {
             if (t.enabled && t.valid != null && !t.valid.test(t.text())) {
                 setStatus(Component.translatable("skill_atlas.ui.invalid_fields"), Theme.RED);

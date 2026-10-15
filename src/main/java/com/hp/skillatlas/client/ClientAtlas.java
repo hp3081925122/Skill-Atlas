@@ -8,6 +8,7 @@ import com.hp.skillatlas.data.AtlasDefinition;
 import com.hp.skillatlas.data.AtlasTexts;
 import com.hp.skillatlas.data.Category;
 import com.hp.skillatlas.data.EditOps;
+import com.hp.skillatlas.data.ExperienceMath;
 import com.hp.skillatlas.data.ItemCost;
 import com.hp.skillatlas.data.PlayerProgress;
 import com.hp.skillatlas.data.PointPool;
@@ -100,6 +101,11 @@ public final class ClientAtlas {
             return 0;
         }
         return player.getInventory().getTimesChanged();
+    }
+
+    public static long experiencePoints() {
+        LocalPlayer player = Minecraft.getInstance().player;
+        return player == null ? 0 : ExperienceMath.available(player.experienceLevel, player.experienceProgress, player.getXpNeededForNextLevel());
     }
 
     public static void reset() {

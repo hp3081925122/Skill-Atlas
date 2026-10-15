@@ -9,7 +9,7 @@ public final class AtlasLogic {
     }
 
     public enum Check {
-        OK, MISSING, MAXED, LOCKED, NO_POINTS, NO_ITEMS
+        OK, MISSING, MAXED, LOCKED, NO_POINTS, NO_EXPERIENCE, NO_ITEMS
     }
 
     private AtlasLogic() {
@@ -23,7 +23,7 @@ public final class AtlasLogic {
                 continue;
             }
             total++;
-            if (p.level(pre.node) > 0) {
+            if (pre.met(p)) {
                 met++;
             }
         }
@@ -44,6 +44,10 @@ public final class AtlasLogic {
     }
 
     public static Check check(AtlasDefinition d, SkillNode n, PlayerProgress p, Predicate<List<ItemCost>> items) {
+        return check(d, n, p, items, 0);
+    }
+
+    public static Check check(AtlasDefinition d, SkillNode n, PlayerProgress p, Predicate<List<ItemCost>> items, long experience) {
         if (n == null) {
             return Check.MISSING;
         }
@@ -55,7 +59,11 @@ public final class AtlasLogic {
             return Check.LOCKED;
         }
         SkillLevel next = n.levels.get(level);
-        if (p.points(d.poolOf(n)) < next.cost) {
+        if (d.usesExperience(n, next)) {
+            if (experience < next.cost) {
+                return Check.NO_EXPERIENCE;
+            }
+        } else if (p.points(d.poolOf(n)) < next.cost) {
             return Check.NO_POINTS;
         }
         if (!next.items.isEmpty() && !items.test(next.items)) {
@@ -65,8 +73,12 @@ public final class AtlasLogic {
     }
 
     public static State state(AtlasDefinition d, SkillNode n, PlayerProgress p, Predicate<List<ItemCost>> items) {
+        return state(d, n, p, items, 0);
+    }
+
+    public static State state(AtlasDefinition d, SkillNode n, PlayerProgress p, Predicate<List<ItemCost>> items, long experience) {
         int level = p.level(n.id);
-        Check c = check(d, n, p, items);
+        Check c = check(d, n, p, items, experience);
         if (c == Check.MAXED) {
             return State.MAXED;
         }

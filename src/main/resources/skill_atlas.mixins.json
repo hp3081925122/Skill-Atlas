@@ -1,0 +1,23 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.hp.skillatlas.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "skill_atlas.refmap.json",
+  "mixins": [
+    "BlockHarvestMixin",
+    "BerryHarvestMixin",
+    "FishingHookMixin",
+    "EnchantmentMenuMixin",
+    "MovementStatsMixin",
+    "ElytraSpeedMixin",
+    "FurnaceSkillsMixin",
+    "FurnaceMenuClickMixin",
+    "FurnaceQuickMoveMixin",
+    "FurnaceResultSlotMixin"
+  ],
+  "client": [
+    "EnchantmentScreenMixin"
+  ],
+  "injectors": { "defaultRequire": 1 }
+}

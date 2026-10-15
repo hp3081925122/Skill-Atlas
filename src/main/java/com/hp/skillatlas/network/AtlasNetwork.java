@@ -6,7 +6,7 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class AtlasNetwork {
-    private static final String VERSION = "2";
+    private static final String VERSION = "9";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(SkillAtlas.id("main"), () -> VERSION, VERSION::equals, VERSION::equals);
 
     private AtlasNetwork() {
@@ -22,5 +22,7 @@ public final class AtlasNetwork {
                 .encoder(ProgressPacket::encode).decoder(ProgressPacket::decode).consumerMainThread(ProgressPacket::handle).add();
         CHANNEL.messageBuilder(ResultPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(ResultPacket::encode).decoder(ResultPacket::decode).consumerMainThread(ResultPacket::handle).add();
+        CHANNEL.messageBuilder(EnchantingPreviewPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(EnchantingPreviewPacket::encode).decoder(EnchantingPreviewPacket::decode).consumerMainThread(EnchantingPreviewPacket::handle).add();
     }
 }

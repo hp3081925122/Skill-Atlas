@@ -27,6 +27,7 @@ import com.hp.skillatlas.data.Icon;
 import com.hp.skillatlas.data.ItemCost;
 import com.hp.skillatlas.data.Json;
 import com.hp.skillatlas.data.Texts;
+import com.hp.skillatlas.data.NodeShape;
 import com.hp.skillatlas.data.Prerequisite;
 import com.hp.skillatlas.data.Reward;
 import com.hp.skillatlas.data.SkillLevel;
@@ -47,7 +48,7 @@ public final class NodeEditorDialog extends Dialog {
     }
 
     private enum Section {
-        NAME, CATEGORY, ICON, TOOLTIP, FLAGS, PREREQUISITES, LEVELS
+        NAME, CATEGORY, ICON, SHAPE, TOOLTIP, FLAGS, PREREQUISITES, LEVELS
     }
 
     private final MainLayer main;
@@ -267,6 +268,32 @@ public final class NodeEditorDialog extends Dialog {
             f.cells(Component.translatable("skill_atlas.ui.field.icon"), new float[]{2.6F, 8.2F}, iconType, slot);
         }
 
+        heading(f, Section.SHAPE, "skill_atlas.ui.editor.section.shape");
+        Widget shapePreview = new Widget() {
+            @Override
+            public void render(float pt) {
+                float size = Math.min(w, h);
+                CanvasView.shape(n.shape, CanvasView.SHAPE_AVAILABLE, x + w / 2.0F, y + h / 2.0F, size, 0xFFFFFFFF);
+                float is = size * 16 / 26.0F;
+                Icons.draw(n.icon, x + (w - is) / 2.0F, y + (h - is) / 2.0F, is);
+            }
+        };
+        CycleButton<NodeShape> shape = new CycleButton<>(List.of(NodeShape.values()), n.shape,
+                v -> Component.translatable("skill_atlas.shape." + v.key), v -> {
+            n.shape = v;
+            touch(Section.SHAPE);
+        });
+        TextInput size = text(Json.trim(n.size), 8, Section.SHAPE, v -> {
+            Double p = parseDouble(v, SkillNode.MIN_SIZE, SkillNode.MAX_SIZE);
+            if (p != null) {
+                n.size = p;
+            }
+        }).filter(v -> v.matches("[0-9]*([.][0-9]*)?"));
+        size.valid = v -> parseDouble(v, SkillNode.MIN_SIZE, SkillNode.MAX_SIZE) != null;
+        size.tip(Component.translatable("skill_atlas.ui.field.size.desc", Json.trim(SkillNode.MIN_SIZE), Json.trim(SkillNode.MAX_SIZE)));
+        f.cells(Component.translatable("skill_atlas.ui.field.shape"), new float[]{1.2F, 5.4F, 1.6F, 2.4F}, shapePreview, shape,
+                new Label(Component.translatable("skill_atlas.ui.field.size"), Theme.MUTED), size);
+
         heading(f, Section.TOOLTIP, "skill_atlas.ui.editor.section.tooltip");
         TextInput tip = text(Texts.display(n.tooltip), 4000, Section.TOOLTIP, v -> n.tooltip = v).multiline();
         tip.h = 54;
@@ -274,15 +301,11 @@ public final class NodeEditorDialog extends Dialog {
         hint(f, Component.translatable("skill_atlas.ui.editor.text_hint"), Theme.DIM);
 
         heading(f, Section.FLAGS, "skill_atlas.ui.editor.section.flags");
-        Checkbox major = new Checkbox(Component.translatable("skill_atlas.ui.field.major"), n.major, v -> {
-            n.major = v;
-            touch(Section.FLAGS);
-        });
         Checkbox hidden = new Checkbox(Component.translatable("skill_atlas.ui.field.hidden"), n.hidden, v -> {
             n.hidden = v;
             touch(Section.FLAGS);
         });
-        f.cells(Component.empty(), new float[]{1, 1.6F}, major, hidden);
+        f.row(Component.empty(), hidden);
         CycleButton<Boolean> req = new CycleButton<>(List.of(true, false), n.requireAll, v -> {
             if (v) {
                 return Component.translatable("skill_atlas.ui.requirement.all");
@@ -300,6 +323,16 @@ public final class NodeEditorDialog extends Dialog {
             f.full(new Label(Component.translatable("skill_atlas.ui.editor.no_prerequisites"), Theme.MUTED), 12);
         }
         for (Prerequisite pre : new ArrayList<>(n.prerequisites)) {
+            SkillNode target = d.nodes.get(pre.node);
+            int max = target == null ? SkillNode.MAX_LEVELS - 1 : target.maxLevel() - 1;
+            TextInput level = text(String.valueOf(pre.level), 3, Section.PREREQUISITES, v -> {
+                Integer parsed = parseInt(v, 0, max);
+                if (parsed != null) {
+                    pre.level = parsed;
+                }
+            }).filter(v -> v.matches("[0-9]*"));
+            level.valid = v -> parseInt(v, 0, max) != null;
+            level.tip(Component.translatable("skill_atlas.ui.field.prerequisite_level.desc", max));
             Checkbox line = new Checkbox(Component.translatable("skill_atlas.ui.field.line"), pre.line, v -> {
                 pre.line = v;
                 touch(Section.PREREQUISITES);
@@ -310,7 +343,8 @@ public final class NodeEditorDialog extends Dialog {
                 touch(Section.PREREQUISITES);
                 rebuild();
             });
-            f.cells(null, new float[]{7, 2.6F, 1}, nodeChip(pre.node), line, rm);
+            f.cells(null, new float[]{4.4F, 1.8F, 1.2F, 2.7F, 1}, nodeChip(pre.node),
+                    new Label(Component.translatable("skill_atlas.ui.field.prerequisite_level"), Theme.MUTED), level, line, rm);
         }
         Button addPre = new Button(Component.translatable("skill_atlas.ui.editor.add_prerequisite"), () -> stack.push(PickerDialog.nodes(this::canPrerequisite, id -> {
             n.prerequisites.add(new Prerequisite(id, true));
@@ -326,7 +360,8 @@ public final class NodeEditorDialog extends Dialog {
             SkillLevel lv = n.levels.get(i);
             int index = i;
             Component levelTitle = Component.translatable("skill_atlas.ui.editor.level_title", Names.node(n), i + 1);
-            Button open = new Button(Component.translatable("skill_atlas.ui.editor.level_summary", i + 1, lv.cost, lv.rewards.size(), lv.items.size()), () -> stack.push(new LevelDialog(levelTitle, lv, edited -> {
+            boolean experience = ClientAtlas.definition.usesExperience(n, lv);
+            Button open = new Button(Component.translatable(experience ? "skill_atlas.ui.editor.level_summary_experience" : "skill_atlas.ui.editor.level_summary", i + 1, lv.cost, lv.rewards.size(), lv.items.size()), () -> stack.push(new LevelDialog(levelTitle, lv, ClientAtlas.definition.poolOf(n), edited -> {
                 n.levels.set(index, edited);
                 touch(Section.LEVELS);
                 rebuild();
@@ -390,11 +425,14 @@ public final class NodeEditorDialog extends Dialog {
         if (applied.contains(Section.ICON)) {
             c.icon = n.icon.copy();
         }
+        if (applied.contains(Section.SHAPE)) {
+            c.shape = n.shape;
+            c.size = n.size;
+        }
         if (applied.contains(Section.TOOLTIP)) {
             c.tooltip = n.tooltip;
         }
         if (applied.contains(Section.FLAGS)) {
-            c.major = n.major;
             c.hidden = n.hidden;
             c.requireAll = n.requireAll;
         }

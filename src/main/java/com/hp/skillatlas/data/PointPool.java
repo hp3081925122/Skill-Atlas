@@ -50,6 +50,10 @@ public final class PointPool {
         return method == RuleType.KILL && hostile;
     }
 
+    public long counterTarget() {
+        return method == RuleType.MOVEMENT ? count * 100L : count;
+    }
+
     public static String hex(int color) {
         return String.format(Locale.ROOT, "#%06X", color & 0xFFFFFF);
     }

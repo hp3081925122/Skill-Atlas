@@ -387,7 +387,13 @@ public final class AtlasServer {
     }
 
     public static void sendProgress(ServerPlayer player) {
-        CompoundTag tag = progress(player).save();
+        PlayerProgress current = progress(player);
+        long experienceRefund = current.takeExperienceRefund();
+        if (experienceRefund > 0) {
+            ExperienceCosts.refund(player, experienceRefund);
+            data.setDirty();
+        }
+        CompoundTag tag = current.save();
         tag.remove("payments");
         tag.remove("seeded");
         AtlasNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ProgressPacket(tag, canEdit(player)));
@@ -508,27 +514,45 @@ public final class AtlasServer {
     public static void learn(ServerPlayer player, String nodeId) {
         PlayerProgress p = progress(player);
         SkillNode n = definition.nodes.get(nodeId);
-        AtlasLogic.Check check = AtlasLogic.check(definition, n, p, costs -> ItemCosts.has(player.getInventory(), costs));
+        AtlasLogic.Check check = AtlasLogic.check(definition, n, p, costs -> ItemCosts.has(player.getInventory(), costs), ExperienceCosts.available(player));
         if (check == AtlasLogic.Check.OK && !AtlasLogic.visible(definition, n, p)) {
             check = AtlasLogic.Check.LOCKED;
         }
         int level = p.level(nodeId);
-        if (check == AtlasLogic.Check.OK && !ItemCosts.consume(player.getInventory(), n.levels.get(level).items)) {
-            check = AtlasLogic.Check.NO_ITEMS;
-        }
         if (check != AtlasLogic.Check.OK) {
             result(player, ResultPacket.LEARN, false, "skill_atlas.learn." + check.name().toLowerCase(Locale.ROOT), List.of(nodeId));
             sendProgress(player);
             return;
         }
         SkillLevel next = n.levels.get(level);
+        boolean experience = definition.usesExperience(n, next);
+        if (experience && !ExperienceCosts.spend(player, next.cost)) {
+            result(player, ResultPacket.LEARN, false, "skill_atlas.learn.experience_blocked", List.of(nodeId));
+            sendProgress(player);
+            return;
+        }
+        if (!ItemCosts.consume(player.getInventory(), next.items)) {
+            if (experience) {
+                ExperienceCosts.refund(player, next.cost);
+            }
+            result(player, ResultPacket.LEARN, false, "skill_atlas.learn.no_items", List.of(nodeId));
+            sendProgress(player);
+            return;
+        }
         if (!next.items.isEmpty()) {
             SkillAtlas.LOGGER.debug("Consumed {} delivery item requirement(s) from {} for skill {} level {}", next.items.size(), player.getGameProfile().getName(), n.id, level + 1);
         }
         String pool = definition.poolOf(n);
-        p.addPoints(pool, -next.cost);
+        if (experience) {
+            pool = PlayerProgress.EXPERIENCE;
+        } else {
+            p.addPoints(pool, -next.cost);
+        }
         p.alignPayments(n.id, level);
         p.recordPayment(n.id, pool, next.cost);
+        if (experience) {
+            SkillAtlas.LOGGER.debug("Spent {} experience points for {} learning {} level {}", next.cost, player.getGameProfile().getName(), n.id, level + 1);
+        }
         p.setLevel(n.id, level + 1);
         data.setDirty();
         RewardManager.refresh(player);

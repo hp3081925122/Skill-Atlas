@@ -11,6 +11,8 @@ public final class SkillNode {
     public static final int MAX_LEVELS = 100;
     public static final int MAX_PREREQUISITES = 64;
     public static final int MAX_COORD = 1_000_000;
+    public static final double MIN_SIZE = 0.5D;
+    public static final double MAX_SIZE = 4.0D;
 
     public String id = "";
     public String category = "";
@@ -20,7 +22,8 @@ public final class SkillNode {
     public Icon icon = new Icon();
     public int x;
     public int y;
-    public boolean major;
+    public NodeShape shape = NodeShape.RSQUARE;
+    public double size = 1.0D;
     public boolean hidden;
     public boolean requireAll = true;
     public final List<Prerequisite> prerequisites = new ArrayList<>();
@@ -49,7 +52,8 @@ public final class SkillNode {
         n.icon = icon.copy();
         n.x = x;
         n.y = y;
-        n.major = major;
+        n.shape = shape;
+        n.size = size;
         n.hidden = hidden;
         n.requireAll = requireAll;
         for (Prerequisite p : prerequisites) {
@@ -73,7 +77,8 @@ public final class SkillNode {
         o.add("icon", icon.toJson());
         o.addProperty("x", x);
         o.addProperty("y", y);
-        o.addProperty("major", major);
+        o.addProperty("shape", shape.key);
+        o.addProperty("size", size);
         o.addProperty("hidden", hidden);
         if (requireAll) {
             o.addProperty("requirement", "all");
@@ -104,7 +109,8 @@ public final class SkillNode {
         n.icon = Icon.fromJson(o.get("icon"));
         n.x = Json.integer(o, "x", 0, -MAX_COORD, MAX_COORD);
         n.y = Json.integer(o, "y", 0, -MAX_COORD, MAX_COORD);
-        n.major = Json.bool(o, "major", false);
+        n.shape = NodeShape.byKey(Json.string(o, "shape", NodeShape.RSQUARE.key, 16));
+        n.size = Json.number(o, "size", 1.0D, MIN_SIZE, MAX_SIZE);
         n.hidden = Json.bool(o, "hidden", false);
         String requirement = Json.string(o, "requirement", "all", 8);
         if ("all".equals(requirement)) {

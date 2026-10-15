@@ -215,11 +215,11 @@ public final class CategoryBar extends Group {
             }
         }
         out.add(Component.translatable("skill_atlas.ui.category_progress", learned, count).withStyle(s -> s.withColor(0x8A93A8)));
-        out.add(Component.translatable("skill_atlas.ui.category_pool", Names.pool(c.pool)).withStyle(s -> s.withColor(0x8A93A8)));
-        out.add(Component.empty());
-        out.add(Component.translatable("skill_atlas.ui.category_rules").withStyle(s -> s.withColor(0xE8C26A)));
+        out.add(Component.translatable(c.hasNoPool() ? "skill_atlas.ui.category_experience" : "skill_atlas.ui.category_pool", Names.pool(c.pool)).withStyle(s -> s.withColor(0x8A93A8)));
         PointPool pool = ClientAtlas.definition.pools.get(c.pool);
         if (pool != null) {
+            out.add(Component.empty());
+            out.add(Component.translatable("skill_atlas.ui.category_rules").withStyle(s -> s.withColor(0xE8C26A)));
             out.add(Names.earn(pool).withStyle(s -> s.withColor(0xE6E9F2)));
             out.add(Component.literal("  ").append(Names.earnProgress(pool, ClientAtlas.progress.counter(pool.id), ClientAtlas.progress.awarded(pool.id))));
             for (Component line : Names.tooltipLines(pool.description)) {

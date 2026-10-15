@@ -243,7 +243,8 @@ public final class MainLayer extends Layer {
         if (cat != null) {
             int color = Names.poolColor(cat.pool);
             Gfx.sprite(Sprites.GEM, fx, fy + 1, 9, 9, color);
-            Component pts = Component.translatable("skill_atlas.ui.points_value", Names.pool(cat.pool), ClientAtlas.progress.points(cat.pool));
+            Component pts = cat.hasNoPool() ? Component.translatable("skill_atlas.ui.experience_balance", ClientAtlas.experiencePoints())
+                    : Component.translatable("skill_atlas.ui.points_value", Names.pool(cat.pool), ClientAtlas.progress.points(cat.pool));
             fx += 13 + Gfx.text(pts, fx + 13, fy + 2, Theme.TEXT);
         }
         float right = x + w - 8;

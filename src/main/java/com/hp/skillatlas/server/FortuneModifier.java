@@ -31,6 +31,7 @@ import java.util.Map;
 public final class FortuneModifier extends LootModifier {
     public static final DeferredRegister<Codec<? extends IGlobalLootModifier>> SERIALIZERS = DeferredRegister.create(ForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS, SkillAtlas.MOD_ID);
     public static final RegistryObject<Codec<FortuneModifier>> CODEC = SERIALIZERS.register("fortune", () -> RecordCodecBuilder.create(inst -> codecStart(inst).apply(inst, FortuneModifier::new)));
+    public static final RegistryObject<Codec<StoneMineralsModifier>> STONE_MINERALS = SERIALIZERS.register("stone_minerals", () -> StoneMineralsModifier.CODEC);
     private static final ThreadLocal<Boolean> ACTIVE = ThreadLocal.withInitial(() -> false);
 
     public FortuneModifier(LootItemCondition[] conditions) {
@@ -39,6 +40,10 @@ public final class FortuneModifier extends LootModifier {
 
     public static void register(IEventBus bus) {
         SERIALIZERS.register(bus);
+    }
+
+    public static boolean isRerolling() {
+        return ACTIVE.get();
     }
 
     @Override
