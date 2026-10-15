@@ -2,10 +2,11 @@ package com.hp.skillatlas.data;
 
 import com.hp.skillatlas.server.EnchantingBonuses;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.item.enchantment.DamageEnchantment;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderOwner;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
+import net.minecraft.world.item.enchantment.Enchantments;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -13,7 +14,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class EnchantingBonusesTest {
-    private static final Enchantment SHARPNESS = new DamageEnchantment(Enchantment.Rarity.COMMON, 0, EquipmentSlot.MAINHAND);
+    private static final Holder<Enchantment> SHARPNESS = Holder.Reference.createStandAlone(new HolderOwner<>() {}, Enchantments.SHARPNESS);
 
     @Test
     void eachEntryUsesItsOwnRollAndOriginalEntriesStayUnchanged() {
@@ -28,10 +29,10 @@ class EnchantingBonusesTest {
         assertTrue(seed < 10_000);
         List<EnchantmentInstance> original = List.of(new EnchantmentInstance(SHARPNESS, 5), new EnchantmentInstance(SHARPNESS, 3));
         List<EnchantmentInstance> result = EnchantingBonuses.apply(original, RandomSource.create(seed), 30, 127);
-        assertEquals(6, result.get(0).level);
-        assertEquals(3, result.get(1).level);
-        assertEquals(5, original.get(0).level);
-        assertSame(SHARPNESS, result.get(0).enchantment);
+        assertEquals(6, result.get(0).level());
+        assertEquals(3, result.get(1).level());
+        assertEquals(5, original.get(0).level());
+        assertSame(SHARPNESS, result.get(0).enchantment());
         assertSame(original.get(1), result.get(1));
     }
 
@@ -41,7 +42,7 @@ class EnchantingBonusesTest {
         for (int seed = 0; seed < 200; seed++) {
             List<EnchantmentInstance> preview = EnchantingBonuses.apply(original, RandomSource.create(seed), 30, 127);
             List<EnchantmentInstance> actual = EnchantingBonuses.apply(original, RandomSource.create(seed), 30, 127);
-            assertEquals(preview.stream().map(entry -> entry.level).toList(), actual.stream().map(entry -> entry.level).toList());
+            assertEquals(preview.stream().map(EnchantmentInstance::level).toList(), actual.stream().map(EnchantmentInstance::level).toList());
         }
     }
 

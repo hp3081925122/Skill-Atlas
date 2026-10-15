@@ -69,7 +69,8 @@ public final class InfoDialog extends Dialog {
                 Gfx.text(Gfx.ellipsize(Names.node(cur), w - 40).getVisualOrderText(), x + 36, y + 5, 0xFFFFFFFF, true);
                 Component state = Names.state(s);
                 int level = Math.min(ClientAtlas.progress.level(cur.id), cur.maxLevel());
-                float sw = Gfx.text(state, x + 36, y + 18, Names.stateColor(s));
+                float sw = Gfx.width(state);
+                Gfx.text(state, x + 36, y + 18, Names.stateColor(s));
                 Gfx.text(Component.translatable("skill_atlas.ui.level", level, cur.maxLevel()), x + 36 + sw + 8, y + 18, Theme.MUTED);
             }
         });

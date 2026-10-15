@@ -70,6 +70,10 @@ public abstract class Widget {
         return false;
     }
 
+    public boolean codepoint(int codepoint, int mods) {
+        return Character.isBmpCodePoint(codepoint) && chr((char) codepoint, mods);
+    }
+
     public void tick() {
     }
 

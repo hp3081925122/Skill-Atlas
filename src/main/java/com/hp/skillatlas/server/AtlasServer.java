@@ -26,8 +26,8 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.fml.loading.FMLPaths;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.fml.loading.FMLPaths;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -331,7 +331,7 @@ public final class AtlasServer {
     }
 
     public static boolean canEdit(ServerPlayer player) {
-        return player.hasPermissions(AtlasConfig.EDIT_PERMISSION.get());
+        return player.permissions().hasPermission(new net.minecraft.server.permissions.Permission.HasCommandLevel(net.minecraft.server.permissions.PermissionLevel.byId(AtlasConfig.EDIT_PERMISSION.get())));
     }
 
     public static void markSync(ServerPlayer player) {
@@ -376,7 +376,7 @@ public final class AtlasServer {
 
     public static void sendFull(ServerPlayer player) {
         for (Payload p : full()) {
-            AtlasNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), p);
+            PacketDistributor.sendToPlayer(player, p);
         }
     }
 
@@ -396,11 +396,11 @@ public final class AtlasServer {
         CompoundTag tag = current.save();
         tag.remove("payments");
         tag.remove("seeded");
-        AtlasNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ProgressPacket(tag, canEdit(player)));
+        PacketDistributor.sendToPlayer(player, new ProgressPacket(tag, canEdit(player)));
     }
 
     public static void result(ServerPlayer player, int request, boolean ok, String key, List<String> args) {
-        AtlasNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ResultPacket(request, ok, key, args));
+        PacketDistributor.sendToPlayer(player, new ResultPacket(request, ok, key, args));
     }
 
     public static void receive(ServerPlayer player, Payload p) {
@@ -459,7 +459,7 @@ public final class AtlasServer {
             result(player, request, false, e.key(), e.args());
             return;
         } catch (RuntimeException e) {
-            SkillAtlas.LOGGER.warn("Rejected malformed atlas edit from {}: {}", player.getGameProfile().getName(), e.toString());
+            SkillAtlas.LOGGER.warn("Rejected malformed atlas edit from {}: {}", player.getGameProfile().name(), e.toString());
             result(player, request, false, "skill_atlas.error.malformed", List.of());
             return;
         }
@@ -472,11 +472,11 @@ public final class AtlasServer {
             List<Payload> patch = Payload.split(Payload.PATCH, EditOps.patch(definition, changes, revision), Payload.TO_CLIENT_CHUNK);
             for (ServerPlayer target : server.getPlayerList().getPlayers()) {
                 for (Payload part : patch) {
-                    AtlasNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> target), part);
+                    PacketDistributor.sendToPlayer(target, part);
                 }
             }
             definitionChanged(changes.shrunk);
-            SkillAtlas.LOGGER.debug("Applied atlas edit from {}: {} nodes, meta {}, {} text keys in {}", player.getGameProfile().getName(), changes.nodes.size(), changes.meta, changes.texts.size(), player.getLanguage());
+            SkillAtlas.LOGGER.debug("Applied atlas edit from {}: {} nodes, meta {}, {} text keys in {}", player.getGameProfile().name(), changes.nodes.size(), changes.meta, changes.texts.size(), player.getLanguage());
         }
         result(player, request, true, "", List.of());
     }
@@ -540,7 +540,7 @@ public final class AtlasServer {
             return;
         }
         if (!next.items.isEmpty()) {
-            SkillAtlas.LOGGER.debug("Consumed {} delivery item requirement(s) from {} for skill {} level {}", next.items.size(), player.getGameProfile().getName(), n.id, level + 1);
+            SkillAtlas.LOGGER.debug("Consumed {} delivery item requirement(s) from {} for skill {} level {}", next.items.size(), player.getGameProfile().name(), n.id, level + 1);
         }
         String pool = definition.poolOf(n);
         if (experience) {
@@ -551,7 +551,7 @@ public final class AtlasServer {
         p.alignPayments(n.id, level);
         p.recordPayment(n.id, pool, next.cost);
         if (experience) {
-            SkillAtlas.LOGGER.debug("Spent {} experience points for {} learning {} level {}", next.cost, player.getGameProfile().getName(), n.id, level + 1);
+            SkillAtlas.LOGGER.debug("Spent {} experience points for {} learning {} level {}", next.cost, player.getGameProfile().name(), n.id, level + 1);
         }
         p.setLevel(n.id, level + 1);
         data.setDirty();

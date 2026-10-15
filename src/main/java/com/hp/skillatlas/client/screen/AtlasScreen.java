@@ -8,7 +8,10 @@ import com.hp.skillatlas.client.ui.Ui;
 import com.hp.skillatlas.network.ResultPacket;
 import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
@@ -80,37 +83,37 @@ public final class AtlasScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float pt) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float pt) {
         if (computeScale()) {
             stack.resize(stack.width, stack.height);
         }
         updateMouse();
         g.fill(0, 0, width, height, 0x70000000);
-        g.pose().pushPose();
-        g.pose().scale((float) k, (float) k, 1.0F);
+        g.pose().pushMatrix();
+        g.pose().scale((float) k, (float) k);
         Gfx.begin(g, uiScale);
         stack.render(pt);
         Gfx.end();
-        g.pose().popPose();
+        g.pose().popMatrix();
     }
 
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         updateMouse();
-        return stack.mouseDown(Ui.mouseX, Ui.mouseY, button);
+        return stack.mouseDown(Ui.mouseX, Ui.mouseY, event.button());
     }
 
     @Override
-    public boolean mouseReleased(double mx, double my, int button) {
+    public boolean mouseReleased(MouseButtonEvent event) {
         updateMouse();
-        stack.mouseUp(Ui.mouseX, Ui.mouseY, button);
+        stack.mouseUp(Ui.mouseX, Ui.mouseY, event.button());
         return true;
     }
 
     @Override
-    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+    public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
         updateMouse();
-        stack.mouseDrag(Ui.mouseX, Ui.mouseY, button);
+        stack.mouseDrag(Ui.mouseX, Ui.mouseY, event.button());
         return true;
     }
 
@@ -120,21 +123,22 @@ public final class AtlasScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mx, double my, double delta) {
+    public boolean mouseScrolled(double mx, double my, double scrollX, double delta) {
         updateMouse();
         return stack.scroll(Ui.mouseX, Ui.mouseY, delta);
     }
 
     @Override
-    public boolean keyPressed(int key, int scan, int mods) {
-        if (stack.key(key, scan, mods)) {
+    public boolean keyPressed(KeyEvent event) {
+        int key = event.key();
+        if (stack.key(key, event.scancode(), event.modifiers())) {
             return true;
         }
         if (key == GLFW.GLFW_KEY_ESCAPE) {
             onClose();
             return true;
         }
-        if (Ui.focus == null && stack.top() == main && ClientEvents.OPEN.matches(key, scan)) {
+        if (Ui.focus == null && stack.top() == main && ClientEvents.OPEN.matches(event)) {
             onClose();
             return true;
         }
@@ -142,8 +146,8 @@ public final class AtlasScreen extends Screen {
     }
 
     @Override
-    public boolean charTyped(char c, int mods) {
-        return stack.chr(c, mods);
+    public boolean charTyped(CharacterEvent event) {
+        return stack.codepoint(event.codepoint(), 0);
     }
 
     @Override

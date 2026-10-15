@@ -5,7 +5,7 @@ import com.google.gson.JsonObject;
 
 public final class Reward {
     public RewardType type = RewardType.ATTRIBUTE;
-    public String target = "minecraft:generic.attack_damage";
+    public String target = "minecraft:attack_damage";
     public double amount = 1.0D;
     public RewardOperation operation = RewardOperation.ADD;
     public int amplifier;
@@ -62,7 +62,7 @@ public final class Reward {
             target = "";
         } else if (type == RewardType.COMMAND || next == RewardType.ATTRIBUTE || type == RewardType.ATTRIBUTE) {
             if (next == RewardType.ATTRIBUTE) {
-                target = "minecraft:generic.attack_damage";
+                target = "minecraft:attack_damage";
             } else {
                 target = "minecraft:speed";
             }

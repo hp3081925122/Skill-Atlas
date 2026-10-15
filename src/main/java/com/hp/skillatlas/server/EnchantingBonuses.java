@@ -17,8 +17,8 @@ public final class EnchantingBonuses {
         }
         List<EnchantmentInstance> result = new ArrayList<>(original.size());
         for (EnchantmentInstance entry : original) {
-            int level = ActivityMath.boostedEnchantmentLevel(entry.level, chance, random.nextDouble(), maximum);
-            result.add(level == entry.level ? entry : new EnchantmentInstance(entry.enchantment, level));
+            int level = ActivityMath.boostedEnchantmentLevel(entry.level(), chance, random.nextDouble(), maximum);
+            result.add(level == entry.level() ? entry : new EnchantmentInstance(entry.enchantment(), level));
         }
         return result;
     }

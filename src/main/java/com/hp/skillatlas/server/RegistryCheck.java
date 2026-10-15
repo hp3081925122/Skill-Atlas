@@ -14,11 +14,11 @@ import com.hp.skillatlas.data.SkillLevel;
 import com.hp.skillatlas.data.SkillNode;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.nbt.TagParser;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +28,7 @@ public final class RegistryCheck {
     }
 
     public static void check(AtlasDefinition before, AtlasDefinition after, EditOps.Changes changes, ServerPlayer editor) {
-        boolean trusted = editor.hasPermissions(2);
+        boolean trusted = editor.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER);
         for (String id : changes.nodes) {
             SkillNode n = after.nodes.get(id);
             if (n == null) {
@@ -53,7 +53,7 @@ public final class RegistryCheck {
                 icon(c.icon);
             }
         }
-        MinecraftServer server = editor.getServer();
+        MinecraftServer server = editor.level().getServer();
         for (String id : changes.pools) {
             PointPool p = after.pools.get(id);
             if (p == null) {
@@ -63,12 +63,12 @@ public final class RegistryCheck {
                 if (t.startsWith("#")) {
                     continue;
                 }
-                ResourceLocation rl = new ResourceLocation(t);
+                Identifier rl = Identifier.parse(t);
                 boolean known = switch (p.method.targets) {
-                    case ENTITY -> ForgeRegistries.ENTITY_TYPES.containsKey(rl);
-                    case BLOCK -> ForgeRegistries.BLOCKS.containsKey(rl);
-                    case ITEM -> ForgeRegistries.ITEMS.containsKey(rl);
-                    case ADVANCEMENT -> server != null && server.getAdvancements().getAdvancement(rl) != null;
+                    case ENTITY -> BuiltInRegistries.ENTITY_TYPE.containsKey(rl);
+                    case BLOCK -> BuiltInRegistries.BLOCK.containsKey(rl);
+                    case ITEM -> BuiltInRegistries.ITEM.containsKey(rl);
+                    case ADVANCEMENT -> server != null && server.getAdvancements().get(rl) != null;
                     case NONE -> true;
                 };
                 if (!known) {
@@ -106,8 +106,8 @@ public final class RegistryCheck {
         }
         if (!nbt.isEmpty()) {
             try {
-                TagParser.parseTag(nbt);
-            } catch (CommandSyntaxException e) {
+                com.hp.skillatlas.StackComponents.patch(nbt);
+            } catch (RuntimeException e) {
                 throw new AtlasException("skill_atlas.error.bad_nbt", e.getMessage());
             }
         }
@@ -117,12 +117,12 @@ public final class RegistryCheck {
         if (r.type == RewardType.COMMAND) {
             return;
         }
-        ResourceLocation rl = new ResourceLocation(r.target);
+        Identifier rl = Identifier.parse(r.target);
         if (r.type == RewardType.ATTRIBUTE) {
-            if (!ForgeRegistries.ATTRIBUTES.containsKey(rl)) {
+            if (!BuiltInRegistries.ATTRIBUTE.containsKey(rl)) {
                 throw new AtlasException("skill_atlas.error.unknown_attribute", r.target);
             }
-        } else if (!ForgeRegistries.MOB_EFFECTS.containsKey(rl)) {
+        } else if (!BuiltInRegistries.MOB_EFFECT.containsKey(rl)) {
             throw new AtlasException("skill_atlas.error.unknown_effect", r.target);
         }
     }

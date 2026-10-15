@@ -9,15 +9,16 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.gamerules.GameRules;
+import java.util.function.BiConsumer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CocoaBlock;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.NetherWartBlock;
 import net.minecraft.world.level.block.SweetBerryBushBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.Tags;
-import net.minecraftforge.common.util.FakePlayer;
+import net.neoforged.neoforge.common.Tags;
+import net.neoforged.neoforge.common.util.FakePlayer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +34,7 @@ public final class FarmingBonuses {
 
     public static List<ItemStack> drops(BlockState state, ServerLevel level, BlockPos pos, Entity entity, List<ItemStack> original) {
         if (!(entity instanceof ServerPlayer player) || !eligible(player, state)
-                || !level.getGameRules().getBoolean(GameRules.RULE_DOBLOCKDROPS) || level.restoringBlockSnapshots) {
+                || !level.getGameRules().get(GameRules.BLOCK_DROPS) || level.restoringBlockSnapshots) {
             return original;
         }
         double yield = SkillAttributes.value(player, SkillAttributes.HARVEST_YIELD);
@@ -86,13 +87,13 @@ public final class FarmingBonuses {
         if (!level.getBlockState(pos).isAir() || !planted.canSurvive(level, pos)) {
             return;
         }
-        ItemStack seed = state.getBlock().getCloneItemStack(level, pos, state);
+        ItemStack seed = state.getCloneItemStack(level, pos, false);
         if (seed.isEmpty()) {
             return;
         }
         List<ItemStack> candidates = new ArrayList<>(drops);
-        candidates.addAll(player.getInventory().items);
-        candidates.addAll(player.getInventory().offhand);
+        candidates.addAll(player.getInventory().getNonEquipmentItems());
+        candidates.add(player.getOffhandItem());
         for (ItemStack stack : candidates) {
             if (!stack.isEmpty() && stack.is(seed.getItem())) {
                 if (level.setBlock(pos, planted, 3)) {
@@ -105,17 +106,17 @@ public final class FarmingBonuses {
         }
     }
 
-    public static void berries(BlockState state, Level level, BlockPos pos, Player player, ItemStack original) {
+    public static void berries(BlockState state, ServerLevel level, BlockPos pos, Player player, ItemStack original, BiConsumer<ServerLevel, ItemStack> drop) {
         if (!(player instanceof ServerPlayer serverPlayer) || !eligible(player, state)
-                || !level.getGameRules().getBoolean(GameRules.RULE_DOBLOCKDROPS) || level.restoringBlockSnapshots) {
-            Block.popResource(level, pos, original);
+                || !level.getGameRules().get(GameRules.BLOCK_DROPS) || level.restoringBlockSnapshots) {
+            drop.accept(level, original);
             return;
         }
         List<ItemStack> drops = new ArrayList<>();
         drops.add(original);
         increaseYield(serverPlayer, drops, SkillAttributes.value(player, SkillAttributes.HARVEST_YIELD));
         for (ItemStack stack : drops) {
-            Block.popResource(level, pos, stack);
+            drop.accept(level, stack);
         }
     }
 }

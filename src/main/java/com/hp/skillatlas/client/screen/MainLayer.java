@@ -19,7 +19,7 @@ import com.hp.skillatlas.data.AtlasLogic;
 import com.hp.skillatlas.data.Category;
 import com.hp.skillatlas.data.SkillNode;
 import com.hp.skillatlas.network.ResultPacket;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
@@ -245,7 +245,8 @@ public final class MainLayer extends Layer {
             Gfx.sprite(Sprites.GEM, fx, fy + 1, 9, 9, color);
             Component pts = cat.hasNoPool() ? Component.translatable("skill_atlas.ui.experience_balance", ClientAtlas.experiencePoints())
                     : Component.translatable("skill_atlas.ui.points_value", Names.pool(cat.pool), ClientAtlas.progress.points(cat.pool));
-            fx += 13 + Gfx.text(pts, fx + 13, fy + 2, Theme.TEXT);
+            Gfx.text(pts, fx + 13, fy + 2, Theme.TEXT);
+            fx += 13 + Gfx.width(pts);
         }
         float right = x + w - 8;
         Component zoom = Component.literal(Math.round(canvas.zoom() * 100) + "%");
@@ -284,7 +285,7 @@ public final class MainLayer extends Layer {
 
     @Override
     public boolean key(int key, int scan, int mods) {
-        if (Screen.hasControlDown() && key == GLFW.GLFW_KEY_F) {
+        if (com.hp.skillatlas.client.ui.Ui.hasControlDown() && key == GLFW.GLFW_KEY_F) {
             Ui.focus(search);
             return true;
         }

@@ -37,11 +37,11 @@ public final class EnchantingTransactions {
             int seed = player.getEnchantmentSeed();
             action.accept(level, pos);
             ItemStack result = menu.getSlot(0).getItem();
-            if (seed == player.getEnchantmentSeed() && ItemStack.isSameItemSameTags(before, result)) {
+            if (seed == player.getEnchantmentSeed() && ItemStack.isSameItemSameComponents(before, result)) {
                 return;
             }
             ItemStack remaining = menu.getSlot(1).getItem();
-            if (lapis.is(Items.LAPIS_LAZULI) && (remaining.isEmpty() || ItemStack.isSameItemSameTags(lapis, remaining))
+            if (lapis.is(Items.LAPIS_LAZULI) && (remaining.isEmpty() || ItemStack.isSameItemSameComponents(lapis, remaining))
                     && lapis.getCount() > remaining.getCount() && saving > 0 && player.getRandom().nextDouble() < saving / 100.0D) {
                 menu.getSlot(1).set(lapis);
             }

@@ -5,12 +5,13 @@ import com.hp.skillatlas.data.ItemPlan;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.component.DataComponentPatch;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,11 +26,11 @@ public final class ItemCosts {
     }
 
     public static Item item(String id) {
-        ResourceLocation rl = ResourceLocation.tryParse(id);
-        if (rl == null || !ForgeRegistries.ITEMS.containsKey(rl)) {
+        Identifier rl = Identifier.tryParse(id);
+        if (rl == null || !BuiltInRegistries.ITEM.containsKey(rl)) {
             return Items.AIR;
         }
-        Item item = ForgeRegistries.ITEMS.getValue(rl);
+        Item item = BuiltInRegistries.ITEM.getValue(rl);
         if (item == null) {
             return Items.AIR;
         }
@@ -42,7 +43,7 @@ public final class ItemCosts {
         }
         return TAGS.computeIfAbsent(nbt, s -> {
             try {
-                return Optional.of(TagParser.parseTag(s));
+                return Optional.of(TagParser.parseCompoundFully(s));
             } catch (CommandSyntaxException e) {
                 return Optional.empty();
             }
@@ -50,21 +51,21 @@ public final class ItemCosts {
     }
 
     private static List<ItemStack> slots(Inventory inventory) {
-        List<ItemStack> out = new ArrayList<>(inventory.items.size() + inventory.offhand.size());
-        out.addAll(inventory.items);
-        out.addAll(inventory.offhand);
+        List<ItemStack> out = new ArrayList<>(inventory.getNonEquipmentItems());
+        out.add(inventory.player.getOffhandItem());
         return out;
     }
 
     private static int[] plan(List<ItemStack> slots, List<ItemCost> costs, int[] got) {
         Item[] items = new Item[costs.size()];
-        CompoundTag[] tags = new CompoundTag[costs.size()];
+        DataComponentPatch[] tags = new DataComponentPatch[costs.size()];
         for (int i = 0; i < costs.size(); i++) {
             ItemCost c = costs.get(i);
             items[i] = item(c.item);
             if (!c.nbt.isEmpty()) {
-                tags[i] = tag(c.nbt);
-                if (tags[i] == null) {
+                try {
+                    tags[i] = StackComponents.patch(c.nbt);
+                } catch (RuntimeException e) {
                     items[i] = Items.AIR;
                 }
             }
@@ -75,7 +76,7 @@ public final class ItemCosts {
             ItemStack stack = slots.get(s);
             if (!stack.isEmpty()) {
                 counts[s] = stack.getCount();
-                plain[s] = stack.getTag() == null;
+                plain[s] = stack.getComponentsPatch().isEmpty();
             }
         }
         return ItemPlan.plan(costs, counts, plain, (i, s) -> {
@@ -86,7 +87,7 @@ public final class ItemCosts {
             if (tags[i] == null) {
                 return true;
             }
-            return tags[i].equals(stack.getTag());
+            return tags[i].equals(stack.getComponentsPatch());
         }, got);
     }
 

@@ -9,7 +9,7 @@ import com.hp.skillatlas.data.RuleType;
 import com.hp.skillatlas.data.Texts;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
@@ -17,8 +17,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.util.FakePlayer;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.common.util.FakePlayer;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,15 +30,15 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 public final class PointTracker {
-    private record Compiled(PointPool pool, Set<ResourceLocation> ids, List<ResourceLocation> tags) {
-        boolean matches(ResourceLocation id, Predicate<ResourceLocation> tag) {
+    private record Compiled(PointPool pool, Set<Identifier> ids, List<Identifier> tags) {
+        boolean matches(Identifier id, Predicate<Identifier> tag) {
             if (ids.isEmpty() && tags.isEmpty()) {
                 return true;
             }
             if (id != null && ids.contains(id)) {
                 return true;
             }
-            for (ResourceLocation t : tags) {
+            for (Identifier t : tags) {
                 if (tag.test(t)) {
                     return true;
                 }
@@ -55,13 +55,13 @@ public final class PointTracker {
     public static void rebuild(AtlasDefinition d) {
         RULES.clear();
         for (PointPool p : d.pools.values()) {
-            Set<ResourceLocation> ids = new HashSet<>();
-            List<ResourceLocation> tags = new ArrayList<>();
+            Set<Identifier> ids = new HashSet<>();
+            List<Identifier> tags = new ArrayList<>();
             for (String t : p.targets) {
                 if (t.startsWith("#")) {
-                    tags.add(new ResourceLocation(t.substring(1)));
+                    tags.add(Identifier.parse(t.substring(1)));
                 } else {
-                    ids.add(new ResourceLocation(t));
+                    ids.add(Identifier.parse(t));
                 }
             }
             RULES.computeIfAbsent(p.method, k -> new ArrayList<>()).add(new Compiled(p, ids, tags));
@@ -87,14 +87,14 @@ public final class PointTracker {
             return;
         }
         EntityType<?> type = victim.getType();
-        ResourceLocation id = ForgeRegistries.ENTITY_TYPES.getKey(type);
+        Identifier id = BuiltInRegistries.ENTITY_TYPE.getKey(type);
         boolean hostile = victim instanceof Enemy;
-        SkillAtlas.LOGGER.debug("Kill tracked: player={}, entity={}, hostile={}", player.getGameProfile().getName(), id, hostile);
+        SkillAtlas.LOGGER.debug("Kill tracked: player={}, entity={}, hostile={}", player.getGameProfile().name(), id, hostile);
         for (Compiled c : rules(RuleType.KILL)) {
             if (c.pool.hostileOnly() && !hostile) {
                 continue;
             }
-            if (c.matches(id, t -> type.is(TagKey.create(Registries.ENTITY_TYPE, t)))) {
+            if (c.matches(id, t -> type.builtInRegistryHolder().is(TagKey.create(Registries.ENTITY_TYPE, t)))) {
                 progress(player, c.pool, 1);
             }
         }
@@ -104,7 +104,7 @@ public final class PointTracker {
         if (rules(RuleType.MINE).isEmpty() || state.isAir() || !counts(player)) {
             return;
         }
-        ResourceLocation id = ForgeRegistries.BLOCKS.getKey(state.getBlock());
+        Identifier id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
         for (Compiled c : rules(RuleType.MINE)) {
             if (c.matches(id, t -> state.is(TagKey.create(Registries.BLOCK, t)))) {
                 progress(player, c.pool, 1);
@@ -116,7 +116,7 @@ public final class PointTracker {
         if (rules(type).isEmpty() || stack.isEmpty() || !counts(player)) {
             return;
         }
-        ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         for (Compiled c : rules(type)) {
             if (c.matches(id, t -> stack.is(TagKey.create(Registries.ITEM, t)))) {
                 progress(player, c.pool, stack.getCount());
@@ -128,7 +128,7 @@ public final class PointTracker {
         if (!counts(player)) {
             return;
         }
-        ResourceLocation id = ForgeRegistries.BLOCKS.getKey(state.getBlock());
+        Identifier id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
         for (Compiled c : rules(RuleType.HARVEST)) {
             if (c.matches(id, t -> state.is(TagKey.create(Registries.BLOCK, t)))) {
                 progress(player, c.pool, 1);
@@ -142,14 +142,14 @@ public final class PointTracker {
         }
         for (Compiled c : rules(RuleType.FISH)) {
             boolean matches = drops.stream().filter(stack -> !stack.isEmpty()).anyMatch(stack ->
-                    c.matches(ForgeRegistries.ITEMS.getKey(stack.getItem()), t -> stack.is(TagKey.create(Registries.ITEM, t))));
+                    c.matches(BuiltInRegistries.ITEM.getKey(stack.getItem()), t -> stack.is(TagKey.create(Registries.ITEM, t))));
             if (matches) {
                 progress(player, c.pool, 1);
             }
         }
     }
 
-    public static void advancement(ServerPlayer player, ResourceLocation id, boolean displayed) {
+    public static void advancement(ServerPlayer player, Identifier id, boolean displayed) {
         if (rules(RuleType.ADVANCEMENT).isEmpty() || !counts(player)) {
             return;
         }
@@ -204,7 +204,7 @@ public final class PointTracker {
         p.addAwarded(pool.id, gain);
         if (AtlasConfig.NOTIFY_POINTS.get()) {
             Component name = Texts.component(AtlasServer.definition().texts.display(pool.name, player.getLanguage()), pool.id).withStyle(s -> s.withColor(pool.color));
-            player.displayClientMessage(Component.translatable("skill_atlas.message.points_gained", gain, name), true);
+            player.sendSystemMessage(Component.translatable("skill_atlas.message.points_gained", gain, name), true);
         }
     }
 }

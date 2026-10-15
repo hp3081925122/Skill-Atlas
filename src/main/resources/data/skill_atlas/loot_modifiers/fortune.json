@@ -1,4 +1,5 @@
 {
   "type": "skill_atlas:fortune",
+  "priority": 1,
   "conditions": []
 }

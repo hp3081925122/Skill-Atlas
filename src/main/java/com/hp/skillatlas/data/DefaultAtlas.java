@@ -20,23 +20,23 @@ public final class DefaultAtlas {
         d.pools.put(combat.id, combat);
         PointPool mining = new PointPool("mining", "skill_atlas.sample.pool.mining", 0x6FB7E8, 1);
         mining.method = RuleType.MINE;
-        mining.targets.add("#forge:ores");
+        mining.targets.add("#c:ores");
         mining.count = 8;
         d.pools.put(mining.id, mining);
         d.categories.put("combat", new Category("combat", "skill_atlas.sample.category.combat", Icon.item("minecraft:iron_sword"), "combat"));
         d.categories.put("mining", new Category("mining", "skill_atlas.sample.category.mining", Icon.item("minecraft:iron_pickaxe"), "mining"));
 
-        branch(d, "health", "minecraft:apple", "minecraft:generic.max_health", RewardOperation.ADD, new double[]{1.0D, 4.0D, 6.0D}, -1, -1, false,
+        branch(d, "health", "minecraft:apple", "minecraft:max_health", RewardOperation.ADD, new double[]{1.0D, 4.0D, 6.0D}, -1, -1, false,
                 new ItemCost("minecraft:golden_carrot", 8, ""), new ItemCost("minecraft:golden_apple", 2, ""), new ItemCost("minecraft:heart_of_the_sea", 1, ""));
         branch(d, "healing", "minecraft:glistering_melon_slice", "skill_atlas:healing_efficiency", RewardOperation.ADD, new double[]{2.5D, 10.0D, 15.0D}, 1, -1, false,
                 new ItemCost("minecraft:glistering_melon_slice", 6, ""), new ItemCost("minecraft:ghast_tear", 2, ""), new ItemCost("minecraft:totem_of_undying", 1, ""));
-        branch(d, "attack", "minecraft:iron_sword", "minecraft:generic.attack_damage", RewardOperation.ADD, new double[]{0.2D, 0.8D, 1.2D}, -1, -1, true,
+        branch(d, "attack", "minecraft:iron_sword", "minecraft:attack_damage", RewardOperation.ADD, new double[]{0.2D, 0.8D, 1.2D}, -1, -1, true,
                 new ItemCost("minecraft:iron_ingot", 12, ""), new ItemCost("minecraft:blaze_rod", 8, ""), new ItemCost("minecraft:diamond", 4, ""));
-        branch(d, "attack_speed", "minecraft:golden_sword", "minecraft:generic.attack_speed", RewardOperation.MULTIPLY_BASE, new double[]{0.02D, 0.08D, 0.12D}, -1, 1, true,
+        branch(d, "attack_speed", "minecraft:golden_sword", "minecraft:attack_speed", RewardOperation.MULTIPLY_BASE, new double[]{0.02D, 0.08D, 0.12D}, -1, 1, true,
                 new ItemCost("minecraft:feather", 16, ""), new ItemCost("minecraft:gold_ingot", 12, ""), new ItemCost("minecraft:phantom_membrane", 4, ""));
-        branch(d, "armor", "minecraft:iron_chestplate", "minecraft:generic.armor", RewardOperation.ADD, new double[]{0.5D, 2.0D, 3.0D}, 1, -1, true,
+        branch(d, "armor", "minecraft:iron_chestplate", "minecraft:armor", RewardOperation.ADD, new double[]{0.5D, 2.0D, 3.0D}, 1, -1, true,
                 new ItemCost("minecraft:leather", 16, ""), new ItemCost("minecraft:iron_block", 3, ""), new ItemCost("minecraft:diamond", 4, ""));
-        branch(d, "toughness", "minecraft:netherite_chestplate", "minecraft:generic.armor_toughness", RewardOperation.ADD, new double[]{0.25D, 1.0D, 1.5D}, 1, 1, true,
+        branch(d, "toughness", "minecraft:netherite_chestplate", "minecraft:armor_toughness", RewardOperation.ADD, new double[]{0.25D, 1.0D, 1.5D}, 1, 1, true,
                 new ItemCost("minecraft:obsidian", 8, ""), new ItemCost("minecraft:shulker_shell", 2, ""), new ItemCost("minecraft:netherite_scrap", 2, ""));
         branch(d, "experience", "minecraft:experience_bottle", "skill_atlas:experience_gain", RewardOperation.ADD, new double[]{5.0D, 20.0D, 30.0D}, -1, 1, false,
                 new ItemCost("minecraft:lapis_lazuli", 16, ""), new ItemCost("minecraft:ender_pearl", 8, ""), new ItemCost("minecraft:experience_bottle", 8, ""));
@@ -126,7 +126,7 @@ public final class DefaultAtlas {
             luckMajor.tooltip = "skill_atlas.sample.node.fishing_luck_major.tooltip";
             luckMajor.size = 1.3D;
             luckMajor.prerequisites.add(new Prerequisite(i == 1 ? "fishing_lure" : "fishing_luck", true));
-            luckMajor.levels.add(new SkillLevel(1, Reward.attribute("minecraft:generic.luck", 1, RewardOperation.ADD)));
+            luckMajor.levels.add(new SkillLevel(1, Reward.attribute("minecraft:luck", 1, RewardOperation.ADD)));
             luckMajor.levels.get(0).items.add(new ItemCost("minecraft:emerald", 16, ""));
             d.nodes.put(luckMajor.id, luckMajor);
         }
@@ -157,14 +157,14 @@ public final class DefaultAtlas {
         running.count = 100;
         d.pools.put(running.id, running);
         d.categories.put("running", new Category("running", "skill_atlas.sample.category.running", Icon.item("minecraft:leather_boots"), "running"));
-        movementBranch(d, "running_speed", "minecraft:sugar", "minecraft:generic.movement_speed", RewardOperation.MULTIPLY_BASE, -96);
+        movementBranch(d, "running_speed", "minecraft:sugar", "minecraft:movement_speed", RewardOperation.MULTIPLY_BASE, -96);
         movementBranch(d, "jump_height", "minecraft:rabbit_foot", "skill_atlas:jump_height", RewardOperation.ADD, 0);
-        movementBranch(d, "swim_speed", "minecraft:prismarine_shard", "forge:swim_speed", RewardOperation.MULTIPLY_BASE, 96);
+        movementBranch(d, "swim_speed", "minecraft:prismarine_shard", "neoforge:swim_speed", RewardOperation.MULTIPLY_BASE, 96);
 
         SkillNode step = node("running_vitality", "running", "minecraft:diamond_boots", -96, 224);
         step.size = 1.3D;
         step.prerequisites.add(new Prerequisite("running_speed_5", true));
-        step.levels.add(new SkillLevel(1, Reward.attribute("forge:step_height_addition", 1.0D, RewardOperation.ADD)));
+        step.levels.add(new SkillLevel(1, Reward.attribute("minecraft:step_height", 1.0D, RewardOperation.ADD)));
         step.levels.get(0).items.add(new ItemCost("minecraft:diamond_boots", 1, ""));
         d.nodes.put(step.id, step);
 

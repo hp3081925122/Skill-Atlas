@@ -201,34 +201,34 @@ public final class PlayerProgress {
 
     public static PlayerProgress load(CompoundTag tag) {
         PlayerProgress p = new PlayerProgress();
-        p.experienceRefund = Math.max(0, Math.min(MAX_POINTS, tag.getLong("experience_refund")));
-        CompoundTag lv = tag.getCompound("levels");
-        for (String k : lv.getAllKeys()) {
-            p.setLevel(k, lv.getInt(k));
+        p.experienceRefund = Math.max(0, Math.min(MAX_POINTS, tag.getLongOr("experience_refund", 0)));
+        CompoundTag lv = tag.getCompoundOrEmpty("levels");
+        for (String k : lv.keySet()) {
+            p.setLevel(k, lv.getIntOr(k, 0));
         }
-        CompoundTag pt = tag.getCompound("points");
-        for (String k : pt.getAllKeys()) {
-            p.setPoints(k, pt.getLong(k));
+        CompoundTag pt = tag.getCompoundOrEmpty("points");
+        for (String k : pt.keySet()) {
+            p.setPoints(k, pt.getLongOr(k, 0));
         }
-        CompoundTag ct = tag.getCompound("counters");
-        for (String k : ct.getAllKeys()) {
-            p.setCounter(k, ct.getLong(k));
+        CompoundTag ct = tag.getCompoundOrEmpty("counters");
+        for (String k : ct.keySet()) {
+            p.setCounter(k, ct.getLongOr(k, 0));
         }
-        CompoundTag aw = tag.getCompound("awarded");
-        for (String k : aw.getAllKeys()) {
-            p.awarded.put(k, aw.getLong(k));
+        CompoundTag aw = tag.getCompoundOrEmpty("awarded");
+        for (String k : aw.keySet()) {
+            p.awarded.put(k, aw.getLongOr(k, 0));
         }
-        CompoundTag pay = tag.getCompound("payments");
-        for (String k : pay.getAllKeys()) {
-            ListTag l = pay.getList(k, Tag.TAG_COMPOUND);
+        CompoundTag pay = tag.getCompoundOrEmpty("payments");
+        for (String k : pay.keySet()) {
+            ListTag l = pay.getListOrEmpty(k);
             for (int i = 0; i < l.size(); i++) {
-                CompoundTag e = l.getCompound(i);
-                p.recordPayment(k, e.getString("pool"), e.getLong("amount"));
+                CompoundTag e = l.getCompoundOrEmpty(i);
+                p.recordPayment(k, e.getStringOr("pool", ""), e.getLongOr("amount", 0));
             }
         }
-        ListTag sd = tag.getList("seeded", Tag.TAG_STRING);
+        ListTag sd = tag.getListOrEmpty("seeded");
         for (int i = 0; i < sd.size(); i++) {
-            p.seeded.add(sd.getString(i));
+            p.seeded.add(sd.getStringOr(i, ""));
         }
         return p;
     }

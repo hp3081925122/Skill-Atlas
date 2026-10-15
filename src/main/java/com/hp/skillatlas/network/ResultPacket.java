@@ -1,16 +1,18 @@
 package com.hp.skillatlas.network;
 
-import com.hp.skillatlas.client.ClientPackets;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.codec.StreamCodec;
+import com.hp.skillatlas.SkillAtlas;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
-public record ResultPacket(int request, boolean ok, String key, List<String> args) {
+public record ResultPacket(int request, boolean ok, String key, List<String> args) implements CustomPacketPayload {
+    public static final Type<ResultPacket> TYPE = new Type<>(SkillAtlas.id("result"));
+    public static final StreamCodec<FriendlyByteBuf, ResultPacket> STREAM_CODEC = StreamCodec.of((buffer, packet) -> encode(packet, buffer), ResultPacket::decode);
+    @Override public Type<ResultPacket> type() { return TYPE; }
+
     public static final int LEARN = -1;
 
     public static void encode(ResultPacket p, FriendlyByteBuf buf) {
@@ -35,7 +37,4 @@ public record ResultPacket(int request, boolean ok, String key, List<String> arg
         return new ResultPacket(request, ok, key, args);
     }
 
-    public static void handle(ResultPacket p, Supplier<NetworkEvent.Context> ctx) {
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientPackets.result(p));
-    }
 }

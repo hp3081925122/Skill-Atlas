@@ -27,7 +27,7 @@ public abstract class FishingHookMixin {
     private void skillAtlas$fishingAttributes(Player player, Level level, int luck, int lure, CallbackInfo ci) {
         this.luck += SkillAttributes.roll(SkillAttributes.value(player, SkillAttributes.FISHING_LUCK), player.getRandom());
         int bonus = SkillAttributes.roll(SkillAttributes.value(player, SkillAttributes.FISHING_LURE), player.getRandom());
-        this.lureSpeed += bonus;
+        this.lureSpeed += bonus * 100;
         skillAtlas$hasLure = bonus > 0;
     }
 
@@ -35,7 +35,7 @@ public abstract class FishingHookMixin {
     private int skillAtlas$minimumWait(RandomSource random, int min, int max) {
         int value = Mth.nextInt(random, min, max);
         if (skillAtlas$hasLure && min == 100 && max == 600) {
-            return ActivityMath.fishingWaitRoll(value, lureSpeed);
+            return Math.max(value, lureSpeed + 20);
         }
         return value;
     }

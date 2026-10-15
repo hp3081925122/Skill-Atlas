@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.ModifyArg;
 
 @Mixin(LivingEntity.class)
 public abstract class ElytraSpeedMixin {
-    @ModifyArg(method = "travel(Lnet/minecraft/world/phys/Vec3;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;move(Lnet/minecraft/world/entity/MoverType;Lnet/minecraft/world/phys/Vec3;)V", ordinal = 2), index = 1)
+    @ModifyArg(method = "travelFallFlying", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;move(Lnet/minecraft/world/entity/MoverType;Lnet/minecraft/world/phys/Vec3;)V", ordinal = 0), index = 1)
     private Vec3 skillAtlas$elytraSpeed(Vec3 movement) {
         if ((Object) this instanceof Player player && !player.getAbilities().flying) {
             return movement.scale(1.0D + SkillAttributes.value(player, SkillAttributes.ELYTRA_SPEED) / 100.0D);
