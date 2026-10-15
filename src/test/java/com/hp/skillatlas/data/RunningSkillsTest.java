@@ -15,7 +15,7 @@ class RunningSkillsTest {
         String[][] branches = {
                 {"running_speed", "running_vitality", "minecraft:generic.movement_speed", "minecraft:diamond_boots"},
                 {"jump_height", "light_landing", "skill_atlas:jump_height", "minecraft:feather"},
-                {"swim_speed", "underwater_breathing", "forge:swim_speed", "minecraft:turtle_helmet"}
+                {"swim_speed", "underwater_breathing", "neoforge:swim_speed", "minecraft:turtle_helmet"}
         };
         for (String[] branch : branches) {
             PlayerProgress p = new PlayerProgress();
@@ -47,7 +47,7 @@ class RunningSkillsTest {
             assertEquals(1, major.levels.get(0).cost);
         }
         assertEquals(1, d.nodes.get("running_vitality").levels.get(0).rewards.get(0).amount);
-        assertEquals("forge:step_height_addition", d.nodes.get("running_vitality").levels.get(0).rewards.get(0).target);
+        assertEquals("minecraft:generic.step_height", d.nodes.get("running_vitality").levels.get(0).rewards.get(0).target);
         assertEquals(40, d.nodes.get("light_landing").levels.get(0).rewards.get(0).amount);
         Reward breathing = d.nodes.get("underwater_breathing").levels.get(0).rewards.get(0);
         assertEquals(RewardType.EFFECT, breathing.type);

@@ -1,6 +1,6 @@
 package com.hp.skillatlas.client.ui;
 
-import net.minecraft.SharedConstants;
+import net.minecraft.util.StringUtil;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -343,7 +343,7 @@ public class TextInput extends Widget {
                 } else {
                     clean.append(' ');
                 }
-            } else if (SharedConstants.isAllowedChatCharacter(c)) {
+            } else if (StringUtil.isAllowedChatCharacter(c)) {
                 clean.append(c);
             }
         }
@@ -545,7 +545,7 @@ public class TextInput extends Widget {
         if (!enabled) {
             return false;
         }
-        if (SharedConstants.isAllowedChatCharacter(c)) {
+        if (StringUtil.isAllowedChatCharacter(c)) {
             insert(String.valueOf(c));
             blink = Util.getMillis();
             return true;

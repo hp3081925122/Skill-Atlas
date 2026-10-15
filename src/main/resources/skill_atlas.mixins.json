@@ -2,9 +2,10 @@
   "required": true,
   "minVersion": "0.8",
   "package": "com.hp.skillatlas.mixin",
-  "compatibilityLevel": "JAVA_17",
-  "refmap": "skill_atlas.refmap.json",
+  "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "LootingSkillsMixin",
+    "DeathLootingMixin",
     "BlockHarvestMixin",
     "BerryHarvestMixin",
     "FishingHookMixin",

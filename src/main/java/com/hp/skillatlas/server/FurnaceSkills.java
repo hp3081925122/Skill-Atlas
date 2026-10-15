@@ -9,10 +9,10 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.AbstractFurnaceMenu;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.registries.RegistryObject;
+import net.minecraft.core.Holder;
 
 import java.util.List;
 
@@ -24,7 +24,7 @@ public final class FurnaceSkills {
     private FurnaceSkills() {
     }
 
-    public static double value(AbstractFurnaceBlockEntity furnace, RegistryObject<Attribute> attribute) {
+    public static double value(AbstractFurnaceBlockEntity furnace, Holder<Attribute> attribute) {
         if (!(furnace.getLevel() instanceof ServerLevel level)) {
             return 0;
         }
@@ -54,7 +54,7 @@ public final class FurnaceSkills {
     }
 
     private static boolean added(ItemStack before, ItemStack after) {
-        return !after.isEmpty() && (!ItemStack.isSameItemSameTags(before, after) || after.getCount() > before.getCount());
+        return !after.isEmpty() && (!ItemStack.isSameItemSameComponents(before, after) || after.getCount() > before.getCount());
     }
 
     public static int advance(AbstractFurnaceBlockEntity furnace, int requested) {
@@ -77,7 +77,7 @@ public final class FurnaceSkills {
         return requested;
     }
 
-    public static List<Recipe<?>> collectExperience(AbstractFurnaceBlockEntity furnace, ServerLevel level, Vec3 pos) {
+    public static List<RecipeHolder<?>> collectExperience(AbstractFurnaceBlockEntity furnace, ServerLevel level, Vec3 pos) {
         Double previous = EXPERIENCE.get();
         EXPERIENCE.set(value(furnace, SkillAttributes.SMELTING_EXPERIENCE));
         try {

@@ -2,7 +2,7 @@ package com.hp.skillatlas.server;
 
 import com.hp.skillatlas.SkillAtlas;
 import com.hp.skillatlas.SkillAttributes;
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.server.level.ServerPlayer;
@@ -13,11 +13,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
-import net.minecraftforge.common.loot.IGlobalLootModifier;
-import net.minecraftforge.common.loot.LootModifier;
+import net.neoforged.neoforge.common.loot.IGlobalLootModifier;
+import net.neoforged.neoforge.common.loot.LootModifier;
 
 public final class StoneMineralsModifier extends LootModifier {
-    public static final Codec<StoneMineralsModifier> CODEC = RecordCodecBuilder.create(inst -> codecStart(inst).apply(inst, StoneMineralsModifier::new));
+    public static final MapCodec<StoneMineralsModifier> CODEC = RecordCodecBuilder.mapCodec(inst -> codecStart(inst).apply(inst, StoneMineralsModifier::new));
 
     public StoneMineralsModifier(LootItemCondition[] conditions) {
         super(conditions);
@@ -30,7 +30,7 @@ public final class StoneMineralsModifier extends LootModifier {
         }
         BlockState state = ctx.getParamOrNull(LootContextParams.BLOCK_STATE);
         if (state == null || !state.is(Blocks.STONE)
-                || !state.getBlock().getLootTable().equals(ctx.getQueriedLootTableId())
+                || !state.getBlock().getLootTable().location().equals(ctx.getQueriedLootTableId())
                 || !(ctx.getParamOrNull(LootContextParams.THIS_ENTITY) instanceof ServerPlayer player)
                 || player.getAbilities().instabuild || player.isSpectator()) {
             return loot;
@@ -56,7 +56,7 @@ public final class StoneMineralsModifier extends LootModifier {
     }
 
     @Override
-    public Codec<? extends IGlobalLootModifier> codec() {
+    public MapCodec<? extends IGlobalLootModifier> codec() {
         return CODEC;
     }
 }

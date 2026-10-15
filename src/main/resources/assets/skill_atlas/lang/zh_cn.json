@@ -365,7 +365,7 @@
   "skill_atlas.ui.add": "添加",
   "skill_atlas.ui.and_more": "%s 等 %s 项",
   "skill_atlas.ui.any": "任意目标",
-  "skill_atlas.tag.forge.ores": "矿物",
+  "skill_atlas.tag.c.ores": "矿物",
   "skill_atlas.tag.minecraft.fall_damage_immune": "免疫摔落伤害",
   "skill_atlas.ui.any_hostile": "任意敌对生物",
   "skill_atlas.ui.hostile_of": "%s（仅敌对）",

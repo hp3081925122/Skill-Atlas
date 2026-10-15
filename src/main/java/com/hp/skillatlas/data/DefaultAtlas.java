@@ -20,7 +20,7 @@ public final class DefaultAtlas {
         d.pools.put(combat.id, combat);
         PointPool mining = new PointPool("mining", "skill_atlas.sample.pool.mining", 0x6FB7E8, 1);
         mining.method = RuleType.MINE;
-        mining.targets.add("#forge:ores");
+        mining.targets.add("#c:ores");
         mining.count = 8;
         d.pools.put(mining.id, mining);
         d.categories.put("combat", new Category("combat", "skill_atlas.sample.category.combat", Icon.item("minecraft:iron_sword"), "combat"));
@@ -159,12 +159,12 @@ public final class DefaultAtlas {
         d.categories.put("running", new Category("running", "skill_atlas.sample.category.running", Icon.item("minecraft:leather_boots"), "running"));
         movementBranch(d, "running_speed", "minecraft:sugar", "minecraft:generic.movement_speed", RewardOperation.MULTIPLY_BASE, -96);
         movementBranch(d, "jump_height", "minecraft:rabbit_foot", "skill_atlas:jump_height", RewardOperation.ADD, 0);
-        movementBranch(d, "swim_speed", "minecraft:prismarine_shard", "forge:swim_speed", RewardOperation.MULTIPLY_BASE, 96);
+        movementBranch(d, "swim_speed", "minecraft:prismarine_shard", "neoforge:swim_speed", RewardOperation.MULTIPLY_BASE, 96);
 
         SkillNode step = node("running_vitality", "running", "minecraft:diamond_boots", -96, 224);
         step.size = 1.3D;
         step.prerequisites.add(new Prerequisite("running_speed_5", true));
-        step.levels.add(new SkillLevel(1, Reward.attribute("forge:step_height_addition", 1.0D, RewardOperation.ADD)));
+        step.levels.add(new SkillLevel(1, Reward.attribute("minecraft:generic.step_height", 1.0D, RewardOperation.ADD)));
         step.levels.get(0).items.add(new ItemCost("minecraft:diamond_boots", 1, ""));
         d.nodes.put(step.id, step);
 

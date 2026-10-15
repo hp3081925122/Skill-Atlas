@@ -3,6 +3,7 @@ package com.hp.skillatlas.server;
 import com.hp.skillatlas.SkillAtlas;
 import com.hp.skillatlas.data.PlayerProgress;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
 
@@ -17,7 +18,7 @@ public final class ProgressData extends SavedData {
     private final Map<UUID, PlayerProgress> players = new HashMap<>();
 
     public static ProgressData get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(ProgressData::load, ProgressData::new, NAME);
+        return server.overworld().getDataStorage().computeIfAbsent(new SavedData.Factory<>(ProgressData::new, ProgressData::load), NAME);
     }
 
     public PlayerProgress of(UUID id) {
@@ -29,14 +30,14 @@ public final class ProgressData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         CompoundTag all = new CompoundTag();
         players.forEach((id, p) -> all.put(id.toString(), p.save()));
         tag.put("players", all);
         return tag;
     }
 
-    public static ProgressData load(CompoundTag tag) {
+    public static ProgressData load(CompoundTag tag, HolderLookup.Provider registries) {
         ProgressData data = new ProgressData();
         CompoundTag all = tag.getCompound("players");
         for (String key : all.getAllKeys()) {

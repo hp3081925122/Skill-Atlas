@@ -22,8 +22,8 @@ import com.hp.skillatlas.data.RewardType;
 import com.hp.skillatlas.data.SkillLevel;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.IForgeRegistry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Registry;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +46,7 @@ public final class LevelDialog extends Dialog {
         this.lv.experience = level.usesExperience(pool.isEmpty());
     }
 
-    private static boolean registered(IForgeRegistry<?> registry, String id) {
+    private static boolean registered(Registry<?> registry, String id) {
         ResourceLocation rl = ResourceLocation.tryParse(Json.normalizeResource(id));
         return rl != null && registry.containsKey(rl);
     }
@@ -189,7 +189,7 @@ public final class LevelDialog extends Dialog {
         switch (r.type) {
             case ATTRIBUTE -> {
                 TextInput target = text(r.target, 256, v -> r.target = Json.normalizeResource(v));
-                target.valid = v -> registered(ForgeRegistries.ATTRIBUTES, v);
+                target.valid = v -> registered(BuiltInRegistries.ATTRIBUTE, v);
                 target.tip(() -> List.of(Names.attribute(r.target)));
                 Button pick = new Button(Component.translatable("skill_atlas.ui.pick"), () -> stack.push(PickerDialog.attributes(id -> {
                     r.target = id;
@@ -203,7 +203,7 @@ public final class LevelDialog extends Dialog {
             }
             case EFFECT, IMMUNITY -> {
                 TextInput target = text(r.target, 256, v -> r.target = Json.normalizeResource(v));
-                target.valid = v -> registered(ForgeRegistries.MOB_EFFECTS, v);
+                target.valid = v -> registered(BuiltInRegistries.MOB_EFFECT, v);
                 target.tip(() -> List.of(Names.effect(r.target)));
                 Button pick = new Button(Component.translatable("skill_atlas.ui.pick"), () -> stack.push(PickerDialog.effects(id -> {
                     r.target = id;

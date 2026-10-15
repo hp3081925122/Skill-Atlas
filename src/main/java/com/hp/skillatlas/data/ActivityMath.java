@@ -9,7 +9,7 @@ public final class ActivityMath {
                 ? original + 1 : original;
     }
 
-    public static int fishingWaitRoll(int original, int lure) {
-        return Math.max(original, lure * 100 + 20);
+    public static int fishingWaitRoll(int original, int lureTicks) {
+        return Math.max(original, lureTicks + 20);
     }
 }

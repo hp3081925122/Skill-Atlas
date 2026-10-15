@@ -120,7 +120,7 @@ public final class AtlasScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mx, double my, double delta) {
+    public boolean mouseScrolled(double mx, double my, double horizontal, double delta) {
         updateMouse();
         return stack.scroll(Ui.mouseX, Ui.mouseY, delta);
     }
