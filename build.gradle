@@ -1,8 +1,16 @@
+buildscript {
+    repositories {
+        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+        mavenCentral()
+    }
+    dependencies { classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT' }
+}
 plugins {
     id 'eclipse'
     id 'idea'
     id 'net.minecraftforge.gradle' version '[6.0,6.2)'
 }
+apply plugin: 'org.spongepowered.mixin'
 version = project.mod_version
 group = project.mod_group_id
 base { archivesName = project.mod_id }
@@ -19,13 +27,20 @@ minecraft {
         configureEach {
             workingDirectory project.file('run')
             property 'forge.logging.console.level', 'info'
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
             mods { "${project.mod_id}" { source sourceSets.main } }
         }
         client {}
         server { args '--nogui' }
     }
 }
+mixin {
+    add sourceSets.main, "${mod_id}.refmap.json"
+    config "${mod_id}.mixins.json"
+}
 dependencies {
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
     minecraft "net.minecraftforge:forge:${project.minecraft_version}-${project.forge_version}"
     minecraftLibrary 'com.github.promeg:tinypinyin:2.0.3'
     jarJar(group: 'com.github.promeg', name: 'tinypinyin', version: '[2.0.3,2.0.4)')
@@ -44,6 +59,7 @@ tasks.named('processResources', ProcessResources).configure {
 }
 tasks.named('jar', Jar).configure { archiveClassifier = 'slim'; finalizedBy 'reobfJar' }
 tasks.named('jarJar').configure { archiveClassifier = ''; finalizedBy 'reobfJarJar' }
+tasks.withType(Jar).configureEach { manifest.attributes('MixinConfigs': "${mod_id}.mixins.json") }
 tasks.named('build').configure { dependsOn 'jarJar' }
 def testRuntime = sourceSets.test.runtimeClasspath
 def testBridge = new File(gradle.gradleUserHomeDir, "caches/skill-atlas-test-classpath/${Integer.toHexString(projectDir.absolutePath.hashCode())}/runtime.jar")

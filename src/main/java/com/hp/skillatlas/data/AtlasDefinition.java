@@ -43,6 +43,11 @@ public final class AtlasDefinition {
         return c.pool;
     }
 
+    public boolean usesExperience(SkillNode node, SkillLevel level) {
+        Category c = categories.get(node.category);
+        return level.usesExperience(c != null && c.hasNoPool());
+    }
+
     public List<SkillNode> nodesIn(String category) {
         List<SkillNode> out = new ArrayList<>();
         for (SkillNode n : nodes.values()) {
@@ -149,7 +154,7 @@ public final class AtlasDefinition {
             throw new AtlasException("skill_atlas.error.too_many", "nodes", String.valueOf(MAX_NODES));
         }
         for (Category c : categories.values()) {
-            if (!pools.containsKey(c.pool)) {
+            if (!c.hasNoPool() && !pools.containsKey(c.pool)) {
                 throw new AtlasException("skill_atlas.error.missing_pool", c.pool);
             }
         }
@@ -162,6 +167,15 @@ public final class AtlasDefinition {
             if (n.levels.isEmpty() || n.levels.size() > SkillNode.MAX_LEVELS) {
                 throw new AtlasException("skill_atlas.error.no_levels", n.id);
             }
+            Category category = categories.get(n.category);
+            for (SkillLevel level : n.levels) {
+                if (level.experience == null) {
+                    level.experience = category.hasNoPool();
+                }
+                if (!level.experience && level.cost > 0 && category.hasNoPool()) {
+                    throw new AtlasException("skill_atlas.error.no_skill_pool", n.id);
+                }
+            }
             Set<String> seen = new HashSet<>();
             for (Prerequisite p : n.prerequisites) {
                 if (p.node.equals(n.id)) {
@@ -169,6 +183,9 @@ public final class AtlasDefinition {
                 }
                 if (!nodes.containsKey(p.node)) {
                     throw new AtlasException("skill_atlas.error.missing_prerequisite", n.id, p.node);
+                }
+                if (p.level < 0 || p.level >= nodes.get(p.node).maxLevel()) {
+                    throw new AtlasException("skill_atlas.error.prerequisite_level", n.id, p.node, String.valueOf(nodes.get(p.node).maxLevel() - 1));
                 }
                 if (!seen.add(p.node)) {
                     throw new AtlasException("skill_atlas.error.duplicate_prerequisite", n.id, p.node);

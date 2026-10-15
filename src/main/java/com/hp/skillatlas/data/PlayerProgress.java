@@ -15,6 +15,7 @@ import java.util.Set;
 
 public final class PlayerProgress {
     public static final long MAX_POINTS = 1_000_000_000_000L;
+    public static final String EXPERIENCE = "@experience";
 
     public record Payment(String pool, long amount) {
     }
@@ -25,6 +26,7 @@ public final class PlayerProgress {
     private final Map<String, Long> awarded = new HashMap<>();
     private final Map<String, List<Payment>> payments = new HashMap<>();
     private final Set<String> seeded = new HashSet<>();
+    private long experienceRefund;
 
     public int level(String node) {
         return levels.getOrDefault(node, 0);
@@ -112,9 +114,21 @@ public final class PlayerProgress {
                 payments.remove(node);
             }
         }
-        refunds.forEach(this::addPoints);
+        refunds.forEach((pool, amount) -> {
+            if (EXPERIENCE.equals(pool)) {
+                experienceRefund = Math.min(MAX_POINTS, experienceRefund + amount);
+            } else {
+                addPoints(pool, amount);
+            }
+        });
         setLevel(node, level);
         return refunds;
+    }
+
+    public long takeExperienceRefund() {
+        long amount = experienceRefund;
+        experienceRefund = 0;
+        return amount;
     }
 
     public boolean seed(AtlasDefinition definition) {
@@ -152,6 +166,7 @@ public final class PlayerProgress {
 
     public CompoundTag save() {
         CompoundTag tag = new CompoundTag();
+        tag.putLong("experience_refund", experienceRefund);
         CompoundTag lv = new CompoundTag();
         levels.forEach(lv::putInt);
         tag.put("levels", lv);
@@ -186,6 +201,7 @@ public final class PlayerProgress {
 
     public static PlayerProgress load(CompoundTag tag) {
         PlayerProgress p = new PlayerProgress();
+        p.experienceRefund = Math.max(0, Math.min(MAX_POINTS, tag.getLong("experience_refund")));
         CompoundTag lv = tag.getCompound("levels");
         for (String k : lv.getAllKeys()) {
             p.setLevel(k, lv.getInt(k));

@@ -8,10 +8,12 @@ import com.hp.skillatlas.client.ui.Dialog;
 import com.hp.skillatlas.client.ui.Gfx;
 import com.hp.skillatlas.client.ui.Label;
 import com.hp.skillatlas.client.ui.ScrollGroup;
+import com.hp.skillatlas.client.ui.Sounds;
 import com.hp.skillatlas.client.ui.Sprites;
 import com.hp.skillatlas.client.ui.Theme;
 import com.hp.skillatlas.client.ui.Widget;
 import com.hp.skillatlas.data.AtlasLogic;
+import com.hp.skillatlas.data.Prerequisite;
 import com.hp.skillatlas.data.SkillNode;
 import net.minecraft.network.chat.Component;
 
@@ -22,6 +24,7 @@ public final class InfoDialog extends Dialog {
     private int builtVersion;
     private int builtProgress;
     private int builtItems;
+    private long builtExperience;
 
     public InfoDialog(String nodeId) {
         super(Component.translatable("skill_atlas.ui.details"), 300, 280);
@@ -37,6 +40,7 @@ public final class InfoDialog extends Dialog {
         builtVersion = ClientAtlas.version;
         builtProgress = ClientAtlas.progressVersion;
         builtItems = ClientAtlas.inventoryStamp();
+        builtExperience = ClientAtlas.experiencePoints();
         SkillNode n = node();
         if (n == null) {
             Label gone = add(new Label(Component.translatable("skill_atlas.error.missing_node", nodeId), Theme.RED));
@@ -51,7 +55,7 @@ public final class InfoDialog extends Dialog {
                 if (cur == null) {
                     return;
                 }
-                AtlasLogic.State s = AtlasLogic.state(ClientAtlas.definition, cur, ClientAtlas.progress, ClientAtlas::hasItems);
+                AtlasLogic.State s = AtlasLogic.state(ClientAtlas.definition, cur, ClientAtlas.progress, ClientAtlas::hasItems, ClientAtlas.experiencePoints());
                 Sprites.Sprite frame = Sprites.NODE_AVAILABLE;
                 if (s == AtlasLogic.State.LOCKED) {
                     frame = Sprites.NODE_LOCKED;
@@ -90,8 +94,50 @@ public final class InfoDialog extends Dialog {
             scroll.add(l);
             cy += l.h + 1;
         }
+        List<Prerequisite> prerequisites = NodeTooltip.prerequisites(n);
+        if (!prerequisites.isEmpty()) {
+            cy += 5;
+            String key = n.requireAll ? "skill_atlas.ui.requires_all" : "skill_atlas.ui.requires_any";
+            Label heading = new Label(Component.translatable(key), Theme.GOLD).wrapped(width);
+            heading.bounds(scroll.x + 2, cy, width, heading.h);
+            scroll.add(heading);
+            cy += heading.h + 1;
+            for (Prerequisite pre : prerequisites) {
+                Label link = new Label(NodeTooltip.prerequisite(pre), Theme.TEXT) {
+                    @Override
+                    public void render(float pt) {
+                        if (hovered()) {
+                            Gfx.fill(x, y, w, h, Theme.ROW_HOVER);
+                        }
+                        super.render(pt);
+                    }
+
+                    @Override
+                    public boolean mouseDown(double mx, double my, int button) {
+                        if (button != 0) {
+                            return false;
+                        }
+                        SkillNode target = ClientAtlas.definition.nodes.get(pre.node);
+                        if (target != null) {
+                            Sounds.click();
+                            AtlasScreen screen = AtlasScreen.current();
+                            if (screen != null && screen.main() != null) {
+                                screen.main().jumpTo(target);
+                            }
+                            InfoDialog.this.close();
+                            stack.push(new InfoDialog(target.id));
+                        }
+                        return true;
+                    }
+                }.wrapped(width);
+                link.tip(Component.translatable("skill_atlas.ui.prerequisite_jump", Names.nodeById(pre.node)));
+                link.bounds(scroll.x + 2, cy, width, link.h);
+                scroll.add(link);
+                cy += link.h + 2;
+            }
+        }
         scroll.rebuilt();
-        AtlasLogic.Check check = AtlasLogic.check(ClientAtlas.definition, n, ClientAtlas.progress, ClientAtlas::hasItems);
+        AtlasLogic.Check check = AtlasLogic.check(ClientAtlas.definition, n, ClientAtlas.progress, ClientAtlas::hasItems, ClientAtlas.experiencePoints());
         String key = "skill_atlas.ui.learn";
         if (ClientAtlas.progress.level(n.id) > 0) {
             key = "skill_atlas.ui.upgrade";
@@ -106,7 +152,7 @@ public final class InfoDialog extends Dialog {
 
     @Override
     public void render(float pt) {
-        if (builtVersion != ClientAtlas.version || builtProgress != ClientAtlas.progressVersion || builtItems != ClientAtlas.inventoryStamp()) {
+        if (builtVersion != ClientAtlas.version || builtProgress != ClientAtlas.progressVersion || builtItems != ClientAtlas.inventoryStamp() || builtExperience != ClientAtlas.experiencePoints()) {
             layout(stack.width, stack.height);
         }
         super.render(pt);

@@ -1,5 +1,6 @@
 package com.hp.skillatlas.client.screen;
 
+import com.google.gson.JsonArray;
 import com.hp.skillatlas.AtlasConfig;
 import com.hp.skillatlas.SkillAtlas;
 import com.hp.skillatlas.client.ClientAtlas;
@@ -15,6 +16,9 @@ import com.hp.skillatlas.client.ui.Widget;
 import com.hp.skillatlas.data.AtlasDefinition;
 import com.hp.skillatlas.data.AtlasLogic;
 import com.hp.skillatlas.data.Category;
+import com.hp.skillatlas.data.CanvasImage;
+import com.hp.skillatlas.data.EditOps;
+import com.hp.skillatlas.data.NodeShape;
 import com.hp.skillatlas.data.PlayerProgress;
 import com.hp.skillatlas.data.Prerequisite;
 import com.hp.skillatlas.data.SkillNode;
@@ -41,7 +45,7 @@ import java.util.Set;
 
 public final class CanvasView extends Widget {
     private enum Mode {
-        NONE, PAN, BOX, MOVE, LINK, RIGHT_PENDING, CLICK_PENDING
+        NONE, PAN, BOX, MOVE, LINK, RIGHT_PENDING, CLICK_PENDING, IMAGE_MOVE, IMAGE_RESIZE
     }
 
     private record Link(SkillNode child, SkillNode parent, Prerequisite pre) {
@@ -53,6 +57,15 @@ public final class CanvasView extends Widget {
     public static final float MIN_ZOOM = 0.25F;
     public static final float MAX_ZOOM = 3.0F;
     public static final int SNAP = 8;
+    public static final ResourceLocation SHAPES = SkillAtlas.id("textures/gui/shapes.png");
+    public static final int SHAPE_CELL = 34;
+    public static final int SHAPE_LOCKED = 0;
+    public static final int SHAPE_AVAILABLE = 1;
+    public static final int SHAPE_LEARNED = 2;
+    public static final int SHAPE_MAXED = 3;
+    public static final int SHAPE_SELECT = 4;
+    public static final int SHAPE_GLOW = 5;
+    public static final int SHAPE_MASK = 6;
     private static final float GRID = 32;
     private static final ResourceLocation DEFAULT_BACKGROUND = SkillAtlas.id("textures/gui/canvas.png");
 
@@ -65,6 +78,10 @@ public final class CanvasView extends Widget {
     private boolean dragged;
     private SkillNode pressNode;
     private Link pressLink;
+    private CanvasImage pressImage;
+    private String selectedImageCategory = "";
+    private String selectedImageId = "";
+    private int[] imageOrigin;
     private boolean wasSelected;
     private boolean additive;
     private final Map<String, int[]> origins = new LinkedHashMap<>();
@@ -124,6 +141,50 @@ public final class CanvasView extends Widget {
         return nodes().size();
     }
 
+    private List<CanvasImage> images() {
+        Category category = ClientAtlas.definition.categories.get(ClientAtlas.category);
+        return category == null ? List.of() : category.images;
+    }
+
+    private CanvasImage selectedImage() {
+        if (!selectedImageCategory.equals(ClientAtlas.category)) {
+            return null;
+        }
+        for (CanvasImage image : images()) {
+            if (image.id.equals(selectedImageId)) {
+                return image;
+            }
+        }
+        return null;
+    }
+
+    public void selectImage(String category, String id) {
+        selectedImageCategory = category;
+        selectedImageId = id;
+        ClientAtlas.SELECTION.clear();
+    }
+
+    private boolean imageHandleAt(CanvasImage image, double mx, double my) {
+        return Math.abs(mx - sx(image.x + image.width / 2.0D)) <= 6
+                && Math.abs(my - sy(image.y + image.height / 2.0D)) <= 6;
+    }
+
+    private CanvasImage imageAt(double mx, double my) {
+        CanvasImage selected = selectedImage();
+        if (selected != null && imageHandleAt(selected, mx, my)) {
+            return selected;
+        }
+        List<CanvasImage> images = images();
+        for (int i = images.size() - 1; i >= 0; i--) {
+            CanvasImage image = images.get(i);
+            if (Math.abs(wx(mx) - image.x) <= image.width / 2.0D
+                    && Math.abs(wy(my) - image.y) <= image.height / 2.0D) {
+                return image;
+            }
+        }
+        return null;
+    }
+
     private float cx() {
         return x + w / 2.0F;
     }
@@ -153,10 +214,7 @@ public final class CanvasView extends Widget {
     }
 
     public static float size(SkillNode n) {
-        if (n.major) {
-            return 34;
-        }
-        return 26;
+        return (float) (26 * n.size);
     }
 
     public static int snap(double v) {
@@ -188,7 +246,7 @@ public final class CanvasView extends Widget {
         ClientAtlas.View v = view();
         v.initialized = true;
         List<SkillNode> list = nodes();
-        if (list.isEmpty() || w <= 0 || h <= 0) {
+        if ((list.isEmpty() && images().isEmpty()) || w <= 0 || h <= 0) {
             v.panX = 0;
             v.panY = 0;
             if (zoom) {
@@ -206,6 +264,12 @@ public final class CanvasView extends Widget {
             minY = Math.min(minY, n.y - half);
             maxX = Math.max(maxX, n.x + half);
             maxY = Math.max(maxY, n.y + half + 12);
+        }
+        for (CanvasImage image : images()) {
+            minX = Math.min(minX, image.x - image.width / 2.0F);
+            minY = Math.min(minY, image.y - image.height / 2.0F);
+            maxX = Math.max(maxX, image.x + image.width / 2.0F);
+            maxY = Math.max(maxY, image.y + image.height / 2.0F);
         }
         v.panX = (minX + maxX) / 2.0F;
         v.panY = (minY + maxY) / 2.0F;
@@ -321,6 +385,7 @@ public final class CanvasView extends Widget {
         Gfx.sprite(Sprites.INSET, x, y, w, h);
         Gfx.pushClip(x + 1, y + 1, w - 2, h - 2);
         renderBackground();
+        renderImages();
         if (ClientAtlas.editMode) {
             renderGrid();
         }
@@ -332,13 +397,14 @@ public final class CanvasView extends Widget {
         renderLines(list);
         renderNodes(list);
         renderDrag();
+        renderImageSelection();
         if (ClientAtlas.definition.categories.isEmpty()) {
             String key = "skill_atlas.ui.no_categories";
             if (ClientAtlas.editMode) {
                 key = "skill_atlas.ui.no_categories.edit";
             }
             Gfx.textCentered(Component.translatable(key), cx(), cy() - 4, Theme.MUTED);
-        } else if (list.isEmpty()) {
+        } else if (list.isEmpty() && images().isEmpty()) {
             String key = "skill_atlas.ui.empty_view";
             if (ClientAtlas.editMode) {
                 key = "skill_atlas.ui.empty_edit";
@@ -348,7 +414,10 @@ public final class CanvasView extends Widget {
         Gfx.popClip();
     }
 
-    private int[] textureSize(ResourceLocation tex) {
+    int[] textureSize(ResourceLocation tex) {
+        if (tex == null) {
+            return new int[]{0, 0};
+        }
         return textureSizes.computeIfAbsent(tex, k -> {
             Optional<Resource> res = Minecraft.getInstance().getResourceManager().getResource(k);
             if (res.isEmpty()) {
@@ -362,6 +431,37 @@ public final class CanvasView extends Widget {
                 return new int[]{0, 0};
             }
         });
+    }
+
+    private void renderImages() {
+        for (CanvasImage image : images()) {
+            float width = image.width * zoom();
+            float height = image.height * zoom();
+            float left = sx(image.x) - width / 2;
+            float top = sy(image.y) - height / 2;
+            if (left + width < x || top + height < y || left > x + w || top > y + h) {
+                continue;
+            }
+            ResourceLocation texture = ResourceLocation.tryParse(image.texture);
+            if (textureSize(texture)[0] > 0) {
+                Gfx.texture(texture, left, top, width, height, 0xFFFFFFFF);
+            } else if (ClientAtlas.editMode) {
+                Gfx.outline(left, top, width, height, 1, Theme.RED);
+            }
+        }
+    }
+
+    private void renderImageSelection() {
+        CanvasImage image = selectedImage();
+        if (!ClientAtlas.editMode || image == null) {
+            return;
+        }
+        float width = image.width * zoom();
+        float height = image.height * zoom();
+        float left = sx(image.x) - width / 2;
+        float top = sy(image.y) - height / 2;
+        Gfx.outline(left, top, width, height, 1, Theme.GOLD);
+        Gfx.outline(left + width - 3, top + height - 3, 7, 7, 2, Theme.GOLD);
     }
 
     private void renderBackground() {
@@ -520,29 +620,24 @@ public final class CanvasView extends Widget {
         Gfx.triangle(tipX, tipY, bx - uy * aw, by + ux * aw, bx + uy * aw, by - ux * aw, color);
     }
 
-    private static Sprites.Sprite frame(SkillNode n, AtlasLogic.State s) {
-        if (n.major) {
-            if (s == AtlasLogic.State.LOCKED) {
-                return Sprites.MAJOR_LOCKED;
-            }
-            if (s == AtlasLogic.State.LEARNED || s == AtlasLogic.State.UPGRADABLE) {
-                return Sprites.MAJOR_LEARNED;
-            }
-            if (s == AtlasLogic.State.MAXED) {
-                return Sprites.MAJOR_MAXED;
-            }
-            return Sprites.MAJOR_AVAILABLE;
-        }
+    private static int frame(AtlasLogic.State s) {
         if (s == AtlasLogic.State.LOCKED) {
-            return Sprites.NODE_LOCKED;
+            return SHAPE_LOCKED;
         }
         if (s == AtlasLogic.State.LEARNED || s == AtlasLogic.State.UPGRADABLE) {
-            return Sprites.NODE_LEARNED;
+            return SHAPE_LEARNED;
         }
         if (s == AtlasLogic.State.MAXED) {
-            return Sprites.NODE_MAXED;
+            return SHAPE_MAXED;
         }
-        return Sprites.NODE_AVAILABLE;
+        return SHAPE_AVAILABLE;
+    }
+
+    public static void shape(NodeShape shape, int layer, float cx, float cy, float size, int argb) {
+        float full = size * SHAPE_CELL / 26.0F;
+        float u = layer * SHAPE_CELL / 256.0F;
+        float v = shape.ordinal() * SHAPE_CELL / 512.0F;
+        Gfx.texture(SHAPES, cx - full / 2.0F, cy - full / 2.0F, full, full, u, v, u + SHAPE_CELL / 256.0F, v + SHAPE_CELL / 512.0F, argb);
     }
 
     private void renderNodes(List<SkillNode> list) {
@@ -558,34 +653,25 @@ public final class CanvasView extends Widget {
                 continue;
             }
             boolean ghost = ClientAtlas.editMode && !AtlasLogic.visible(d, n, p);
-            drawn.add(new Drawn(n, px, py, s, AtlasLogic.state(d, n, p, ClientAtlas::hasItems), !searching || matches.contains(n.id), ghost));
+            drawn.add(new Drawn(n, px, py, s, AtlasLogic.state(d, n, p, ClientAtlas::hasItems, ClientAtlas.experiencePoints()), !searching || matches.contains(n.id), ghost));
         }
         long now = Util.getMillis();
         float wave = (float) (0.5D + 0.5D * Math.sin(now / 320.0D));
         pulses.values().removeIf(t -> now - t > 900);
         for (Drawn dn : drawn) {
             SkillNode n = dn.node;
-            Sprites.Sprite glow = Sprites.NODE_GLOW;
-            Sprites.Sprite select = Sprites.NODE_SELECT;
-            if (n.major) {
-                glow = Sprites.MAJOR_GLOW;
-                select = Sprites.MAJOR_SELECT;
-            }
-            float gs = dn.size * glow.w() / frame(n, dn.state).w();
             Long pulse = pulses.get(n.id);
             if (pulse != null) {
                 float t = (now - pulse) / 900.0F;
-                float ps = gs * (1.0F + t * 0.8F);
-                Gfx.sprite(glow, dn.sx - ps / 2.0F, dn.sy - ps / 2.0F, ps, ps, fade(0xFFFFFFFF, 1.0F - t));
+                shape(n.shape, SHAPE_GLOW, dn.sx, dn.sy, dn.size * (1.0F + t * 0.8F), fade(0xFFFFFFFF, 1.0F - t));
             }
             if (searching && dn.match) {
-                Gfx.sprite(glow, dn.sx - gs / 2.0F, dn.sy - gs / 2.0F, gs, gs, 0xFFECC873);
+                shape(n.shape, SHAPE_GLOW, dn.sx, dn.sy, dn.size, 0xFFECC873);
             } else if (dn.match && (dn.state == AtlasLogic.State.AVAILABLE || dn.state == AtlasLogic.State.UPGRADABLE)) {
-                Gfx.sprite(glow, dn.sx - gs / 2.0F, dn.sy - gs / 2.0F, gs, gs, fade(0xFFFFFFFF, 0.3F + 0.5F * wave));
+                shape(n.shape, SHAPE_GLOW, dn.sx, dn.sy, dn.size, fade(0xFFFFFFFF, 0.3F + 0.5F * wave));
             }
             if (ClientAtlas.editMode && ClientAtlas.SELECTION.contains(n.id)) {
-                float ss = dn.size * select.w() / frame(n, dn.state).w();
-                Gfx.sprite(select, dn.sx - ss / 2.0F, dn.sy - ss / 2.0F, ss, ss);
+                shape(n.shape, SHAPE_SELECT, dn.sx, dn.sy, dn.size, 0xFFFFFFFF);
             }
             int tint = 0xFFFFFFFF;
             if (dn.ghost) {
@@ -593,21 +679,17 @@ public final class CanvasView extends Widget {
             } else if (dn.state == AtlasLogic.State.UNAFFORDABLE) {
                 tint = 0xFFB4B4B4;
             }
-            Gfx.sprite(frame(n, dn.state), dn.sx - dn.size / 2.0F, dn.sy - dn.size / 2.0F, dn.size, dn.size, tint);
+            shape(n.shape, frame(dn.state), dn.sx, dn.sy, dn.size, tint);
         }
         for (Drawn dn : drawn) {
-            float is = 16 * zoom();
-            if (dn.node.major) {
-                is = 20 * zoom();
-            }
+            float is = dn.size * 16 / 26.0F;
             Icons.draw(dn.node.icon, dn.sx - is / 2.0F, dn.sy - is / 2.0F, is);
         }
         for (Drawn dn : drawn) {
-            float inner = dn.size * 0.72F;
             if (!dn.match) {
-                Gfx.fill(dn.sx - dn.size / 2.0F, dn.sy - dn.size / 2.0F, dn.size, dn.size, 0xB0101218);
+                shape(dn.node.shape, SHAPE_MASK, dn.sx, dn.sy, dn.size, 0xB0101218);
             } else if (dn.state == AtlasLogic.State.LOCKED || dn.ghost) {
-                Gfx.fill(dn.sx - inner / 2.0F, dn.sy - inner / 2.0F, inner, inner, 0x80101418);
+                shape(dn.node.shape, SHAPE_MASK, dn.sx, dn.sy, dn.size * 0.72F, 0x80101418);
             }
         }
         boolean details = z >= 0.5F;
@@ -699,6 +781,7 @@ public final class CanvasView extends Widget {
         if (pressNode == null) {
             pressLink = linkAt(mx, my);
         }
+        pressImage = ClientAtlas.editMode && pressNode == null && pressLink == null ? imageAt(mx, my) : null;
         if (button == 2) {
             mode = Mode.PAN;
             return true;
@@ -722,6 +805,19 @@ public final class CanvasView extends Widget {
             }
             return true;
         }
+        if (pressImage != null) {
+            if (ClientAtlas.locked) {
+                main.error(Component.translatable("skill_atlas.ui.locked"));
+                mode = Mode.NONE;
+                return true;
+            }
+            selectImage(ClientAtlas.category, pressImage.id);
+            imageOrigin = new int[]{pressImage.x, pressImage.y, pressImage.width, pressImage.height};
+            mode = imageHandleAt(pressImage, mx, my) ? Mode.IMAGE_RESIZE : Mode.IMAGE_MOVE;
+            lastClickTime = 0;
+            return true;
+        }
+        selectedImageId = "";
         if (pressNode == null) {
             boolean dbl = lastClickNode == null && now - lastClickTime < 300 && Math.abs(mx - lastClickX) < 4 && Math.abs(my - lastClickY) < 4;
             lastClickNode = null;
@@ -828,6 +924,34 @@ public final class CanvasView extends Widget {
                 }
                 moved = offX != 0 || offY != 0;
             }
+            case IMAGE_MOVE -> {
+                if (dragged && pressImage != null) {
+                    int nx = (int) Math.round(imageOrigin[0] + (mx - pressX) / v.zoom);
+                    int ny = (int) Math.round(imageOrigin[1] + (my - pressY) / v.zoom);
+                    pressImage.x = clampCoord(Screen.hasAltDown() ? nx : snap(nx));
+                    pressImage.y = clampCoord(Screen.hasAltDown() ? ny : snap(ny));
+                    moved = pressImage.x != imageOrigin[0] || pressImage.y != imageOrigin[1];
+                }
+            }
+            case IMAGE_RESIZE -> {
+                if (dragged && pressImage != null) {
+                    double dw = (mx - pressX) / v.zoom;
+                    double dh = (my - pressY) / v.zoom;
+                    int width = Math.max(1, Math.min(CanvasImage.MAX_SIZE, (int) Math.round(imageOrigin[2] + dw)));
+                    int height = Math.max(1, Math.min(CanvasImage.MAX_SIZE, (int) Math.round(imageOrigin[3] + dh)));
+                    if (Screen.hasShiftDown()) {
+                        double scale = Math.abs(dw) >= Math.abs(dh) ? width / (double) imageOrigin[2] : height / (double) imageOrigin[3];
+                        scale = Math.min(scale, CanvasImage.MAX_SIZE / (double) Math.max(imageOrigin[2], imageOrigin[3]));
+                        width = Math.max(1, (int) Math.round(imageOrigin[2] * scale));
+                        height = Math.max(1, (int) Math.round(imageOrigin[3] * scale));
+                    }
+                    pressImage.width = width;
+                    pressImage.height = height;
+                    pressImage.x = clampCoord((int) Math.round(imageOrigin[0] + (width - imageOrigin[2]) / 2.0D));
+                    pressImage.y = clampCoord((int) Math.round(imageOrigin[1] + (height - imageOrigin[3]) / 2.0D));
+                    moved = width != imageOrigin[2] || height != imageOrigin[3];
+                }
+            }
             default -> {
             }
         }
@@ -842,6 +966,11 @@ public final class CanvasView extends Widget {
         Mode m = mode;
         mode = Mode.NONE;
         switch (m) {
+            case IMAGE_MOVE, IMAGE_RESIZE -> {
+                if (moved && pressImage != null) {
+                    saveImage(pressImage);
+                }
+            }
             case MOVE -> {
                 if (moved) {
                     List<SkillNode> list = new ArrayList<>();
@@ -906,7 +1035,7 @@ public final class CanvasView extends Widget {
             } else {
                 String id = n.id;
                 menu.add(Component.translatable("skill_atlas.ui.menu.details"), Sprites.INFO, () -> main.stack.push(new InfoDialog(id)));
-                AtlasLogic.Check check = AtlasLogic.check(ClientAtlas.definition, n, ClientAtlas.progress, ClientAtlas::hasItems);
+                AtlasLogic.Check check = AtlasLogic.check(ClientAtlas.definition, n, ClientAtlas.progress, ClientAtlas::hasItems, ClientAtlas.experiencePoints());
                 String key = "skill_atlas.ui.learn";
                 if (ClientAtlas.progress.level(n.id) > 0) {
                     key = "skill_atlas.ui.upgrade";
@@ -937,23 +1066,15 @@ public final class CanvasView extends Widget {
             int wyp = snap(wy(my));
             menu.add(Component.translatable("skill_atlas.ui.menu.paste"), Sprites.PASTE, EditActions.hasClipboard(), () -> EditActions.paste(main, wxp, wyp));
             menu.separator();
-            boolean allMajor = true;
             boolean allHidden = true;
             for (SkillNode t : targets) {
-                allMajor &= t.major;
                 allHidden &= t.hidden;
-            }
-            String majorKey = "skill_atlas.ui.menu.major_on";
-            if (allMajor) {
-                majorKey = "skill_atlas.ui.menu.major_off";
             }
             String hiddenKey = "skill_atlas.ui.menu.hidden_on";
             if (allHidden) {
                 hiddenKey = "skill_atlas.ui.menu.hidden_off";
             }
-            boolean setMajor = !allMajor;
             boolean setHidden = !allHidden;
-            menu.add(Component.translatable(majorKey), Sprites.STAR, () -> EditActions.setMajor(main, targets, setMajor));
             menu.add(Component.translatable(hiddenKey), Sprites.EYE_OFF, () -> EditActions.setHidden(main, targets, setHidden));
             if (!others.isEmpty()) {
                 List<SkillNode> self = List.of(n);
@@ -966,6 +1087,14 @@ public final class CanvasView extends Widget {
             menu.separator();
             menu.add(Component.translatable("skill_atlas.ui.menu.copy_id"), Sprites.COPY, () -> EditActions.copyId(main, n));
             menu.danger(Component.translatable("skill_atlas.ui.menu.delete", targets.size()), Sprites.TRASH, () -> EditActions.delete(main, targets));
+        } else if (pressImage != null) {
+            CanvasImage image = pressImage;
+            selectImage(ClientAtlas.category, image.id);
+            menu.add(Component.translatable("skill_atlas.ui.image.edit"), Sprites.EDIT,
+                    () -> main.stack.push(new CanvasImageDialog(main, ClientAtlas.category, image, false)));
+            menu.add(Component.translatable("skill_atlas.ui.image.front"), Sprites.UP, () -> reorderImage(image, true));
+            menu.add(Component.translatable("skill_atlas.ui.image.back"), Sprites.DOWN, () -> reorderImage(image, false));
+            menu.danger(Component.translatable("skill_atlas.ui.image.delete"), Sprites.TRASH, () -> deleteImage(image));
         } else if (pressLink != null) {
             Link link = pressLink;
             String key = "skill_atlas.ui.menu.line_hide";
@@ -979,6 +1108,7 @@ public final class CanvasView extends Widget {
             int wxp = snap(wx(mx));
             int wyp = snap(wy(my));
             menu.add(Component.translatable("skill_atlas.ui.menu.create"), Sprites.PLUS, !ClientAtlas.definition.categories.isEmpty(), () -> EditActions.create(main, wxp, wyp));
+            menu.add(Component.translatable("skill_atlas.ui.image.add"), Sprites.PLUS, !ClientAtlas.definition.categories.isEmpty(), () -> CanvasImageDialog.create(main, wxp, wyp));
             menu.add(Component.translatable("skill_atlas.ui.menu.paste"), Sprites.PASTE, EditActions.hasClipboard(), () -> EditActions.paste(main, wxp, wyp));
             menu.add(Component.translatable("skill_atlas.ui.menu.paste_isolated"), Sprites.PASTE, EditActions.hasClipboard(), () -> EditActions.paste(main, wxp, wyp, false));
             menu.add(Component.translatable("skill_atlas.ui.menu.undo"), Sprites.LEFT, ClientAtlas.canUndo(), () -> EditActions.undo(main));
@@ -989,7 +1119,59 @@ public final class CanvasView extends Widget {
         main.stack.push(menu);
     }
 
+    private void saveCategoryImages(Category category) {
+        if (ClientAtlas.locked) {
+            main.error(Component.translatable("skill_atlas.ui.locked"));
+            ClientAtlas.requestResync();
+            return;
+        }
+        JsonArray ops = new JsonArray();
+        ops.add(EditOps.categoryOp(category, false));
+        ClientAtlas.edit(ops, result -> {
+            if (!result.ok()) {
+                main.error(Names.error(result.key(), result.args()));
+                ClientAtlas.requestResync();
+            }
+        });
+    }
+
+    private void saveImage(CanvasImage image) {
+        Category category = ClientAtlas.definition.categories.get(ClientAtlas.category);
+        if (category == null) {
+            return;
+        }
+        Category next = category.copy();
+        for (int i = 0; i < next.images.size(); i++) {
+            if (next.images.get(i).id.equals(image.id)) {
+                next.images.set(i, image.copy());
+                saveCategoryImages(next);
+                return;
+            }
+        }
+    }
+
+    private void deleteImage(CanvasImage image) {
+        Category category = ClientAtlas.definition.categories.get(ClientAtlas.category);
+        if (category != null) {
+            Category next = category.copy();
+            next.images.removeIf(picture -> picture.id.equals(image.id));
+            selectedImageId = "";
+            saveCategoryImages(next);
+        }
+    }
+
+    private void reorderImage(CanvasImage image, boolean front) {
+        Category category = ClientAtlas.definition.categories.get(ClientAtlas.category);
+        if (category != null) {
+            Category next = category.copy();
+            next.images.removeIf(picture -> picture.id.equals(image.id));
+            next.images.add(front ? next.images.size() : 0, image.copy());
+            saveCategoryImages(next);
+        }
+    }
+
     private void selectAll() {
+        selectedImageId = "";
         ClientAtlas.SELECTION.clear();
         for (SkillNode n : nodes()) {
             ClientAtlas.SELECTION.add(n.id);
@@ -1049,6 +1231,21 @@ public final class CanvasView extends Widget {
             EditActions.undo(main);
             return true;
         }
+        CanvasImage picture = selectedImage();
+        if (picture != null && !ctrl) {
+            if (key == GLFW.GLFW_KEY_DELETE || key == GLFW.GLFW_KEY_BACKSPACE) {
+                deleteImage(picture);
+                return true;
+            }
+            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER || key == GLFW.GLFW_KEY_F2) {
+                main.stack.push(new CanvasImageDialog(main, ClientAtlas.category, picture, false));
+                return true;
+            }
+            if (key == GLFW.GLFW_KEY_ESCAPE) {
+                selectedImageId = "";
+                return true;
+            }
+        }
         List<SkillNode> sel = selectedNodes();
         if (ctrl && key == GLFW.GLFW_KEY_A) {
             selectAll();
@@ -1056,6 +1253,7 @@ public final class CanvasView extends Widget {
         }
         if (ctrl && key == GLFW.GLFW_KEY_D) {
             ClientAtlas.SELECTION.clear();
+            selectedImageId = "";
             return true;
         }
         if (ctrl && key == GLFW.GLFW_KEY_C) {
@@ -1100,6 +1298,13 @@ public final class CanvasView extends Widget {
         } else if (key == GLFW.GLFW_KEY_DOWN) {
             dy = 1;
         }
+        if ((dx != 0 || dy != 0) && picture != null) {
+            int step = Screen.hasShiftDown() ? 1 : SNAP;
+            picture.x = clampCoord(picture.x + dx * step);
+            picture.y = clampCoord(picture.y + dy * step);
+            saveImage(picture);
+            return true;
+        }
         if ((dx != 0 || dy != 0) && !sel.isEmpty()) {
             int step = SNAP;
             if (Screen.hasShiftDown()) {
@@ -1140,6 +1345,9 @@ public final class CanvasView extends Widget {
             out.add(Component.translatable(key).withStyle(s -> s.withColor(0x8A93A8)));
             out.add(Component.translatable("skill_atlas.ui.link.hint").withStyle(s -> s.withColor(0x8A93A8)));
             return out;
+        }
+        if (ClientAtlas.editMode && imageAt(mx, my) != null) {
+            return List.of(Component.translatable("skill_atlas.ui.image.controls"));
         }
         return null;
     }

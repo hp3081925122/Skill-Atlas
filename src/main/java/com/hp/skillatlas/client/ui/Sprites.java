@@ -34,14 +34,6 @@ public final class Sprites {
     public static final Sprite NODE_AVAILABLE = new Sprite(28, 56, 26, 26, 0);
     public static final Sprite NODE_LEARNED = new Sprite(56, 56, 26, 26, 0);
     public static final Sprite NODE_MAXED = new Sprite(84, 56, 26, 26, 0);
-    public static final Sprite NODE_SELECT = new Sprite(112, 56, 30, 30, 0);
-    public static final Sprite NODE_GLOW = new Sprite(144, 56, 34, 34, 0);
-    public static final Sprite MAJOR_LOCKED = new Sprite(0, 92, 34, 34, 0);
-    public static final Sprite MAJOR_AVAILABLE = new Sprite(36, 92, 34, 34, 0);
-    public static final Sprite MAJOR_LEARNED = new Sprite(72, 92, 34, 34, 0);
-    public static final Sprite MAJOR_MAXED = new Sprite(108, 92, 34, 34, 0);
-    public static final Sprite MAJOR_SELECT = new Sprite(144, 92, 38, 38, 0);
-    public static final Sprite MAJOR_GLOW = new Sprite(184, 92, 42, 42, 0);
 
     public static final int SEARCH = 0;
     public static final int EDIT = 1;

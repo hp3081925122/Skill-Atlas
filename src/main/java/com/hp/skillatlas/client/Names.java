@@ -65,6 +65,9 @@ public final class Names {
     }
 
     public static MutableComponent pool(String id) {
+        if (id.isEmpty()) {
+            return Component.translatable("skill_atlas.ui.experience_currency").withStyle(s -> s.withColor(0xBE8EFF));
+        }
         PointPool p = ClientAtlas.definition.pools.get(id);
         if (p == null) {
             return Component.literal(id);
@@ -73,6 +76,9 @@ public final class Names {
     }
 
     public static int poolColor(String id) {
+        if (id.isEmpty()) {
+            return 0xFFBE8EFF;
+        }
         PointPool p = ClientAtlas.definition.pools.get(id);
         if (p == null) {
             return 0xFFECC873;
@@ -116,9 +122,15 @@ public final class Names {
         return e.getDisplayName().copy();
     }
 
+    public static MutableComponent tag(String id) {
+        String raw = id.startsWith("#") ? id.substring(1) : id;
+        String key = "skill_atlas.tag." + raw.replace(':', '.').replace('/', '.');
+        return Component.translatableWithFallback(key, "#" + raw);
+    }
+
     public static MutableComponent target(RuleType type, String id) {
         if (id.startsWith("#")) {
-            return Component.translatable("skill_atlas.ui.tag", id.substring(1));
+            return tag(id);
         }
         ResourceLocation r = rl(id);
         switch (type.targets) {
@@ -231,13 +243,7 @@ public final class Names {
                 targets = Component.translatable("skill_atlas.ui.any");
             }
         } else {
-            String first = p.targets.get(0);
-            String tagKey = "skill_atlas.tag." + first.substring(1).replace(':', '.').replace('/', '.');
-            if (first.startsWith("#") && I18n.exists(tagKey)) {
-                targets = Component.translatable(tagKey);
-            } else {
-                targets = target(p.method, first);
-            }
+            targets = target(p.method, p.targets.get(0));
             if (p.targets.size() > 1) {
                 targets = Component.translatable("skill_atlas.ui.and_more", targets, p.targets.size() - 1);
             }
@@ -252,7 +258,8 @@ public final class Names {
         if (p.limit > 0 && awarded >= p.limit) {
             return Component.translatable("skill_atlas.ui.points.rule_done").withStyle(s -> s.withColor(0xE0685A));
         }
-        MutableComponent line = Component.translatable("skill_atlas.ui.category_rule_progress", counter, p.count).withStyle(s -> s.withColor(0x7FD8C8));
+        Object progress = p.method == RuleType.MOVEMENT ? number(counter / 100.0D) : counter;
+        MutableComponent line = Component.translatable("skill_atlas.ui.category_rule_progress", progress, p.count).withStyle(s -> s.withColor(0x7FD8C8));
         if (p.limit > 0) {
             line = line.append(Component.literal("  ")).append(Component.translatable("skill_atlas.ui.points.rule_limit", awarded, p.limit).withStyle(s -> s.withColor(0x8A93A8)));
         }

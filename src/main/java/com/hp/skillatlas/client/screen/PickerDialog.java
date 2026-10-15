@@ -102,6 +102,7 @@ public final class PickerDialog extends Dialog {
     private int mode;
     private int rowHeight = 18;
     private float cell;
+    private boolean showIds;
     private TextInput search;
     private ListView<Entry> list;
     private String query = "";
@@ -325,7 +326,7 @@ public final class PickerDialog extends Dialog {
             Optional<? extends Registry<T>> reg = conn.registryAccess().registry(registry);
             reg.ifPresent(r -> r.getTagNames().forEach(tag -> {
                 String id = "#" + tag.location();
-                out.add(new Entry(id, Component.literal(id), spriteIcon(Sprites.FOLDER), modName(tag.location())));
+                out.add(new Entry(id, Names.tag(id), spriteIcon(Sprites.FOLDER), modName(tag.location())));
             }));
         }
         out.sort(Comparator.comparing(e -> e.id));
@@ -349,7 +350,10 @@ public final class PickerDialog extends Dialog {
             SkillNode node = n;
             out.add(new Entry(n.id, Names.node(n), (x, y, size) -> Icons.draw(node.icon, x, y, size), detail));
         }
-        return new PickerDialog(Component.translatable("skill_atlas.ui.pick.node"), out, onPick);
+        PickerDialog picker = new PickerDialog(Component.translatable("skill_atlas.ui.pick.node"), out, onPick);
+        picker.showIds = true;
+        picker.prefW = 380;
+        return picker;
     }
 
     private List<Entry> filtered() {
@@ -438,6 +442,9 @@ public final class PickerDialog extends Dialog {
         list.tooltips = e -> {
             List<Component> lines = new ArrayList<>();
             lines.add(e.name);
+            if (showIds) {
+                lines.add(Component.translatable("skill_atlas.ui.pick.node_id", e.id).withStyle(s -> s.withColor(0x8A93A8)));
+            }
             if (e.detail != null && !e.detail.getString().isEmpty()) {
                 lines.add(e.detail);
             }
@@ -469,6 +476,14 @@ public final class PickerDialog extends Dialog {
         if (hovered) {
             color = 0xFFFFFFFF;
         }
-        Gfx.text(Gfx.ellipsize(e.name, rw - size - 10).getVisualOrderText(), rx + size + 6, ry + (rh - 8) / 2.0F, color, true);
+        float nameWidth = rw - size - 10;
+        float textY = ry + (rh - 8) / 2.0F;
+        if (showIds) {
+            Component id = Gfx.ellipsize(Component.literal(e.id), nameWidth * 0.5F);
+            float idWidth = Gfx.width(id);
+            Gfx.text(id, rx + rw - idWidth - 4, textY, Theme.MUTED);
+            nameWidth -= idWidth + 8;
+        }
+        Gfx.text(Gfx.ellipsize(e.name, nameWidth).getVisualOrderText(), rx + size + 6, textY, color, true);
     }
 }

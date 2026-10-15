@@ -88,7 +88,9 @@ public final class EditActions {
         n.icon = Icon.item("minecraft:book");
         n.x = wx;
         n.y = wy;
-        n.levels.add(new SkillLevel(1));
+        SkillLevel level = new SkillLevel(1);
+        level.experience = cat.hasNoPool();
+        n.levels.add(level);
         NodeEditorDialog.create(main, n);
     }
 
@@ -226,20 +228,6 @@ public final class EditActions {
         JsonArray ops = new JsonArray();
         ops.add(EditOps.nodeOp(copy, false));
         send(main, ops, () -> main.status(Component.translatable("skill_atlas.ui.unlinked"), Theme.MUTED));
-    }
-
-    public static void setMajor(MainLayer main, List<SkillNode> nodes, boolean major) {
-        JsonArray ops = new JsonArray();
-        for (SkillNode n : nodes) {
-            if (n.major != major) {
-                SkillNode c = n.copy();
-                c.major = major;
-                ops.add(EditOps.nodeOp(c, false));
-            }
-        }
-        if (!ops.isEmpty()) {
-            send(main, ops, null);
-        }
     }
 
     public static void setHidden(MainLayer main, List<SkillNode> nodes, boolean hidden) {
@@ -423,7 +411,7 @@ public final class EditActions {
             for (Prerequisite p : n.prerequisites) {
                 String mapped = ids.get(p.node);
                 if (mapped != null) {
-                    c.prerequisites.add(new Prerequisite(mapped, p.line));
+                    c.prerequisites.add(new Prerequisite(mapped, p.line, p.level));
                 } else if (external && d.nodes.containsKey(p.node)) {
                     c.prerequisites.add(p.copy());
                 }

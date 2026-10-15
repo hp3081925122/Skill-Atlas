@@ -30,8 +30,6 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 public final class PointTracker {
-    public static final String BEST_LEVEL = "#best_level";
-
     private record Compiled(PointPool pool, Set<ResourceLocation> ids, List<ResourceLocation> tags) {
         boolean matches(ResourceLocation id, Predicate<ResourceLocation> tag) {
             if (ids.isEmpty() && tags.isEmpty()) {
@@ -126,6 +124,31 @@ public final class PointTracker {
         }
     }
 
+    public static void harvest(ServerPlayer player, BlockState state) {
+        if (!counts(player)) {
+            return;
+        }
+        ResourceLocation id = ForgeRegistries.BLOCKS.getKey(state.getBlock());
+        for (Compiled c : rules(RuleType.HARVEST)) {
+            if (c.matches(id, t -> state.is(TagKey.create(Registries.BLOCK, t)))) {
+                progress(player, c.pool, 1);
+            }
+        }
+    }
+
+    public static void fish(ServerPlayer player, List<ItemStack> drops) {
+        if (!counts(player) || drops.stream().allMatch(ItemStack::isEmpty)) {
+            return;
+        }
+        for (Compiled c : rules(RuleType.FISH)) {
+            boolean matches = drops.stream().filter(stack -> !stack.isEmpty()).anyMatch(stack ->
+                    c.matches(ForgeRegistries.ITEMS.getKey(stack.getItem()), t -> stack.is(TagKey.create(Registries.ITEM, t))));
+            if (matches) {
+                progress(player, c.pool, 1);
+            }
+        }
+    }
+
     public static void advancement(ServerPlayer player, ResourceLocation id, boolean displayed) {
         if (rules(RuleType.ADVANCEMENT).isEmpty() || !counts(player)) {
             return;
@@ -142,26 +165,20 @@ public final class PointTracker {
     }
 
     public static void second(ServerPlayer player) {
-        boolean playtime = !rules(RuleType.PLAYTIME).isEmpty();
-        boolean level = !rules(RuleType.LEVEL).isEmpty();
-        if ((!playtime && !level) || !counts(player)) {
+        if (rules(RuleType.PLAYTIME).isEmpty() || !counts(player)) {
             return;
         }
-        if (playtime) {
-            for (Compiled c : rules(RuleType.PLAYTIME)) {
-                progress(player, c.pool, 1);
-            }
+        for (Compiled c : rules(RuleType.PLAYTIME)) {
+            progress(player, c.pool, 1);
         }
-        if (level) {
-            PlayerProgress p = AtlasServer.progress(player);
-            long best = p.counter(BEST_LEVEL);
-            if (player.experienceLevel > best) {
-                p.setCounter(BEST_LEVEL, player.experienceLevel);
-                AtlasServer.data().setDirty();
-                for (Compiled c : rules(RuleType.LEVEL)) {
-                    progress(player, c.pool, player.experienceLevel - best);
-                }
-            }
+    }
+
+    public static void movement(ServerPlayer player, int centimeters) {
+        if (AtlasServer.server() == null || centimeters <= 0 || rules(RuleType.MOVEMENT).isEmpty() || !counts(player)) {
+            return;
+        }
+        for (Compiled c : rules(RuleType.MOVEMENT)) {
+            progress(player, c.pool, centimeters);
         }
     }
 
@@ -172,8 +189,9 @@ public final class PointTracker {
             return;
         }
         long total = p.counter(pool.id) + amount;
-        long gain = (total / pool.count) * pool.points;
-        p.setCounter(pool.id, total % pool.count);
+        long target = pool.counterTarget();
+        long gain = (total / target) * pool.points;
+        p.setCounter(pool.id, total % target);
         if (pool.limit > 0) {
             gain = Math.min(gain, pool.limit - awarded);
         }

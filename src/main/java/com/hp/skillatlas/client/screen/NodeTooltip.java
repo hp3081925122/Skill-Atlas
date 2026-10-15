@@ -38,7 +38,7 @@ public final class NodeTooltip {
         PlayerProgress p = ClientAtlas.progress;
         List<Component> out = new ArrayList<>();
         out.add(Names.node(n));
-        AtlasLogic.State state = AtlasLogic.state(d, n, p, ClientAtlas::hasItems);
+        AtlasLogic.State state = AtlasLogic.state(d, n, p, ClientAtlas::hasItems, ClientAtlas.experiencePoints());
         int level = Math.min(p.level(n.id), n.maxLevel());
         int stateColor = Names.stateColor(state) & 0xFFFFFF;
         MutableComponent line = Names.state(state).withStyle(s -> s.withColor(stateColor));
@@ -66,26 +66,31 @@ public final class NodeTooltip {
             SkillLevel next = n.levels.get(level);
             out.add(Component.empty());
             String pool = d.poolOf(n);
-            long have = p.points(pool);
+            boolean experience = d.usesExperience(n, next);
+            long have = experience ? ClientAtlas.experiencePoints() : p.points(pool);
             int color = OK;
             if (have < next.cost) {
                 color = BAD;
             }
             int costColor = color;
-            Component cost = Component.translatable("skill_atlas.ui.cost", next.cost, Names.pool(pool)).withStyle(s -> s.withColor(costColor));
+            Component cost = (experience ? Component.translatable("skill_atlas.ui.experience_cost", next.cost)
+                    : Component.translatable("skill_atlas.ui.point_cost", next.cost, Names.pool(pool))).withStyle(s -> s.withColor(costColor));
             String headKey = "skill_atlas.ui.next_rewards";
             if (level == 0) {
                 headKey = "skill_atlas.ui.learn_rewards";
             }
-            out.add(Component.translatable(headKey).withStyle(s -> s.withColor(HEADER)).append(Component.literal("  ")).append(cost));
+            out.add(Component.translatable(headKey).withStyle(s -> s.withColor(HEADER)));
             if (next.rewards.isEmpty()) {
                 out.add(Component.literal(" • ").append(Component.translatable("skill_atlas.ui.no_rewards").withStyle(s -> s.withColor(MUTED))));
             }
             for (Reward r : next.rewards) {
                 out.add(Component.literal(" • ").append(Names.reward(r, details)));
             }
+            out.add(Component.empty());
+            out.add(Component.translatable("skill_atlas.ui.costs").withStyle(s -> s.withColor(HEADER)));
+            out.add(Component.literal(" • ").append(cost));
             if (!next.items.isEmpty()) {
-                out.add(Component.translatable("skill_atlas.ui.items_required").withStyle(s -> s.withColor(HEADER)));
+                out.add(Component.translatable("skill_atlas.ui.extra_items").withStyle(s -> s.withColor(HEADER)));
                 int[] owned = ClientAtlas.ownedItems(next.items);
                 for (int i = 0; i < next.items.size(); i++) {
                     ItemCost c = next.items.get(i);
@@ -102,13 +107,8 @@ public final class NodeTooltip {
                 }
             }
         }
-        List<Prerequisite> pres = new ArrayList<>();
-        for (Prerequisite pre : n.prerequisites) {
-            if (d.nodes.containsKey(pre.node)) {
-                pres.add(pre);
-            }
-        }
-        if (!pres.isEmpty() && (level == 0 || details || !hints)) {
+        List<Prerequisite> pres = prerequisites(n);
+        if (!pres.isEmpty() && hints && (level == 0 || details)) {
             out.add(Component.empty());
             String key = "skill_atlas.ui.requires_all";
             if (!n.requireAll) {
@@ -116,14 +116,7 @@ public final class NodeTooltip {
             }
             out.add(Component.translatable(key).withStyle(s -> s.withColor(HEADER)));
             for (Prerequisite pre : pres) {
-                int color = BAD;
-                String mark = " ✘ ";
-                if (p.level(pre.node) > 0) {
-                    color = OK;
-                    mark = " ✔ ";
-                }
-                int c = color;
-                out.add(Component.literal(mark).withStyle(s -> s.withColor(c)).append(Names.nodeById(pre.node)));
+                out.add(prerequisite(pre));
             }
         }
         if (hints) {
@@ -136,5 +129,19 @@ public final class NodeTooltip {
             }
         }
         return out;
+    }
+
+    public static List<Prerequisite> prerequisites(SkillNode n) {
+        return n.prerequisites.stream().filter(pre -> ClientAtlas.definition.nodes.containsKey(pre.node)).toList();
+    }
+
+    public static MutableComponent prerequisite(Prerequisite pre) {
+        boolean met = pre.met(ClientAtlas.progress);
+        MutableComponent line = Component.literal(met ? " ✔ " : " ✘ ").withStyle(s -> s.withColor(met ? OK : BAD))
+                .append(Names.nodeById(pre.node));
+        if (pre.level > 0) {
+            line.append(Component.translatable("skill_atlas.ui.prerequisite_level", pre.level, ClientAtlas.progress.level(pre.node)));
+        }
+        return line;
     }
 }

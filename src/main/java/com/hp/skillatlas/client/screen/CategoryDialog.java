@@ -72,15 +72,12 @@ public final class CategoryDialog extends Dialog {
         ItemSlot icon = new ItemSlot(() -> c.icon, () -> stack.push(PickerDialog.itemStacks(picked -> c.icon = new Icon(Icon.ITEM, picked.id, picked.nbt))));
         f.row(Component.translatable("skill_atlas.ui.field.icon"), icon);
         List<String> pools = new ArrayList<>(ClientAtlas.definition.pools.keySet());
-        if (pools.isEmpty()) {
-            NodeEditorDialog.hint(f, Component.translatable("skill_atlas.ui.category.no_pools"), Theme.RED);
-        } else {
-            if (!pools.contains(c.pool)) {
-                c.pool = pools.get(0);
-            }
-            CycleButton<String> pool = new CycleButton<>(pools, c.pool, Names::pool, v -> c.pool = v);
-            f.row(Component.translatable("skill_atlas.ui.field.pool"), pool);
+        pools.add(0, "");
+        if (!pools.contains(c.pool)) {
+            c.pool = pools.get(0);
         }
+        CycleButton<String> pool = new CycleButton<>(pools, c.pool, Names::pool, v -> c.pool = v);
+        f.row(Component.translatable("skill_atlas.ui.field.pool"), pool);
         NodeEditorDialog.hint(f, Component.translatable("skill_atlas.ui.category.hint"), Theme.DIM);
         TextInput background = new TextInput(c.background).max(256).placeholder(Component.translatable("skill_atlas.ui.category.background.placeholder"));
         background.valid = s -> s.isBlank() || Json.validResource(Json.normalizeResource(s));
@@ -97,7 +94,7 @@ public final class CategoryDialog extends Dialog {
         f.finish();
         Button cancel = new Button(Component.translatable("skill_atlas.ui.cancel"), this::close);
         save = new Button(Component.translatable("skill_atlas.ui.save"), this::save).style(Button.Style.PRIMARY);
-        save.enabled = !saving && !pools.isEmpty();
+        save.enabled = !saving;
         footer(cancel, save);
     }
 
