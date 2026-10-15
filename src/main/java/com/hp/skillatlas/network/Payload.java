@@ -4,11 +4,13 @@ import com.google.gson.JsonObject;
 import com.hp.skillatlas.client.ClientPackets;
 import com.hp.skillatlas.data.Json;
 import com.hp.skillatlas.server.AtlasServer;
+import com.hp.skillatlas.SkillAtlas;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.fml.LogicalSide;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -19,11 +21,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-public final class Payload {
+public final class Payload implements CustomPacketPayload {
+    public static final Type<Payload> TYPE = new Type<>(SkillAtlas.id("atlas"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, Payload> STREAM_CODEC = StreamCodec.of((buffer, packet) -> encode(packet, buffer), Payload::decode);
     public static final byte EDIT = 1;
     public static final byte RESYNC = 2;
     public static final byte PROGRESS = 3;
@@ -66,14 +69,16 @@ public final class Payload {
         return new Payload(transfer, kind, index, total, data);
     }
 
-    public static void handle(Payload p, Supplier<NetworkEvent.Context> ctx) {
-        NetworkEvent.Context c = ctx.get();
-        if (c.getDirection().getReceptionSide() == LogicalSide.SERVER) {
-            if (c.getSender() != null) {
-                AtlasServer.receive(c.getSender(), p);
-            }
+    @Override
+    public Type<Payload> type() {
+        return TYPE;
+    }
+
+    public static void handle(Payload p, IPayloadContext context) {
+        if (context.player() instanceof ServerPlayer player) {
+            AtlasServer.receive(player, p);
         } else {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientPackets.payload(p));
+            ClientPackets.payload(p);
         }
     }
 

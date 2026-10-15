@@ -20,13 +20,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(SweetBerryBushBlock.class)
 public abstract class BerryHarvestMixin {
-    @Redirect(method = "use", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/SweetBerryBushBlock;popResource(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/item/ItemStack;)V"))
-    private void skillAtlas$berryYield(Level dropLevel, BlockPos dropPos, ItemStack drop, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    @Redirect(method = "useWithoutItem", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/SweetBerryBushBlock;popResource(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/item/ItemStack;)V"))
+    private void skillAtlas$berryYield(Level dropLevel, BlockPos dropPos, ItemStack drop, BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         FarmingBonuses.berries(state, dropLevel, dropPos, player, drop);
     }
 
-    @Inject(method = "use", at = @At("RETURN"))
-    private void skillAtlas$harvest(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit, CallbackInfoReturnable<InteractionResult> cir) {
+    @Inject(method = "useWithoutItem", at = @At("RETURN"))
+    private void skillAtlas$harvest(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit, CallbackInfoReturnable<InteractionResult> cir) {
         if (player instanceof ServerPlayer serverPlayer && cir.getReturnValue().consumesAction()
                 && state.getValue(SweetBerryBushBlock.AGE) > 1
                 && level.getBlockState(pos).is(state.getBlock())

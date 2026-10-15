@@ -14,9 +14,9 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
-import java.nio.charset.StandardCharsets;
+import net.minecraft.core.Holder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,12 +28,12 @@ import java.util.UUID;
 public final class RewardManager {
     public static final String MODIFIER = "skill_atlas";
 
-    private record Periodic(MobEffect effect, int amplifier, int duration, int interval, int phase, boolean particles, boolean icon) {
+    private record Periodic(Holder<MobEffect> effect, int amplifier, int duration, int interval, int phase, boolean particles, boolean icon) {
     }
 
     private static final class Active {
         final List<Periodic> periodic = new ArrayList<>();
-        final Set<MobEffect> immune = new HashSet<>();
+        final Set<Holder<MobEffect>> immune = new HashSet<>();
     }
 
     private static final Map<UUID, Active> ACTIVE = new HashMap<>();
@@ -45,13 +45,13 @@ public final class RewardManager {
     public static void refresh(ServerPlayer player) {
         AtlasDefinition d = AtlasServer.definition();
         PlayerProgress p = AtlasServer.progress(player);
-        for (Attribute attribute : ForgeRegistries.ATTRIBUTES) {
+        for (var attribute : BuiltInRegistries.ATTRIBUTE.holders().toList()) {
             AttributeInstance inst = player.getAttributes().getInstance(attribute);
             if (inst == null) {
                 continue;
             }
             for (AttributeModifier m : inst.getModifiers()) {
-                if (MODIFIER.equals(m.getName())) {
+                if (SkillAtlas.MOD_ID.equals(m.id().getNamespace())) {
                     inst.removeModifier(m);
                 }
             }
@@ -66,7 +66,7 @@ public final class RewardManager {
             for (int i = 0; i < level.rewards.size(); i++) {
                 Reward r = level.rewards.get(i);
                 if (r.type == RewardType.ATTRIBUTE) {
-                    Attribute attribute = ForgeRegistries.ATTRIBUTES.getValue(new ResourceLocation(r.target));
+                    Holder<Attribute> attribute = BuiltInRegistries.ATTRIBUTE.getHolder(ResourceLocation.parse(r.target)).orElse(null);
                     AttributeInstance inst = null;
                     if (attribute != null) {
                         inst = player.getAttributes().getInstance(attribute);
@@ -75,11 +75,11 @@ public final class RewardManager {
                         warn("attribute", r.target);
                         continue;
                     }
-                    UUID id = UUID.nameUUIDFromBytes((n.id + "#" + i).getBytes(StandardCharsets.UTF_8));
+                    ResourceLocation id = SkillAtlas.id("reward/" + n.id + "/" + i);
                     inst.removeModifier(id);
-                    inst.addPermanentModifier(new AttributeModifier(id, MODIFIER, r.amount, operation(r)));
+                    inst.addPermanentModifier(new AttributeModifier(id, r.amount, operation(r)));
                 } else if (r.type == RewardType.EFFECT || r.type == RewardType.IMMUNITY) {
-                    MobEffect effect = ForgeRegistries.MOB_EFFECTS.getValue(new ResourceLocation(r.target));
+                    Holder<MobEffect> effect = BuiltInRegistries.MOB_EFFECT.getHolder(ResourceLocation.parse(r.target)).orElse(null);
                     if (effect == null) {
                         warn("effect", r.target);
                         continue;
@@ -96,7 +96,7 @@ public final class RewardManager {
         if (player.getHealth() > player.getMaxHealth()) {
             player.setHealth(player.getMaxHealth());
         }
-        for (MobEffect effect : active.immune) {
+        for (Holder<MobEffect> effect : active.immune) {
             if (player.hasEffect(effect)) {
                 player.removeEffect(effect);
             }
@@ -120,7 +120,7 @@ public final class RewardManager {
         }
     }
 
-    public static boolean immune(ServerPlayer player, MobEffect effect) {
+    public static boolean immune(ServerPlayer player, Holder<MobEffect> effect) {
         Active active = ACTIVE.get(player.getUUID());
         return active != null && active.immune.contains(effect);
     }
@@ -148,9 +148,9 @@ public final class RewardManager {
 
     private static AttributeModifier.Operation operation(Reward r) {
         return switch (r.operation) {
-            case ADD -> AttributeModifier.Operation.ADDITION;
-            case MULTIPLY_BASE -> AttributeModifier.Operation.MULTIPLY_BASE;
-            case MULTIPLY_TOTAL -> AttributeModifier.Operation.MULTIPLY_TOTAL;
+            case ADD -> AttributeModifier.Operation.ADD_VALUE;
+            case MULTIPLY_BASE -> AttributeModifier.Operation.ADD_MULTIPLIED_BASE;
+            case MULTIPLY_TOTAL -> AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL;
         };
     }
 

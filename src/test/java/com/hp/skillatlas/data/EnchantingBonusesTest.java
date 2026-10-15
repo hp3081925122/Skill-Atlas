@@ -2,8 +2,12 @@ package com.hp.skillatlas.data;
 
 import com.hp.skillatlas.server.EnchantingBonuses;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.item.enchantment.DamageEnchantment;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.EquipmentSlotGroup;
+import java.util.Optional;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import org.junit.jupiter.api.Test;
@@ -13,7 +17,15 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class EnchantingBonusesTest {
-    private static final Enchantment SHARPNESS = new DamageEnchantment(Enchantment.Rarity.COMMON, 0, EquipmentSlot.MAINHAND);
+    static {
+        net.neoforged.fml.loading.LoadingModList.of(List.of(), List.of(), List.of(), List.of(), java.util.Map.of());
+        net.minecraft.SharedConstants.tryDetectVersion();
+        net.minecraft.server.Bootstrap.bootStrap();
+    }
+    private static final Holder<Enchantment> SHARPNESS = Holder.direct(new Enchantment(Component.literal("Test"),
+            new Enchantment.EnchantmentDefinition(HolderSet.direct(), Optional.empty(), 1, 5,
+                    new Enchantment.Cost(1, 0), new Enchantment.Cost(1, 0), 1, List.of(EquipmentSlotGroup.MAINHAND)),
+            HolderSet.direct(), DataComponentMap.EMPTY));
 
     @Test
     void eachEntryUsesItsOwnRollAndOriginalEntriesStayUnchanged() {

@@ -27,7 +27,7 @@ public abstract class FishingHookMixin {
     private void skillAtlas$fishingAttributes(Player player, Level level, int luck, int lure, CallbackInfo ci) {
         this.luck += SkillAttributes.roll(SkillAttributes.value(player, SkillAttributes.FISHING_LUCK), player.getRandom());
         int bonus = SkillAttributes.roll(SkillAttributes.value(player, SkillAttributes.FISHING_LURE), player.getRandom());
-        this.lureSpeed += bonus;
+        this.lureSpeed += bonus * 100;
         skillAtlas$hasLure = bonus > 0;
     }
 

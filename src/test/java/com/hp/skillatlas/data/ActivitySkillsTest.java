@@ -57,7 +57,7 @@ class ActivitySkillsTest {
     void lureCannotProduceANegativeWait() {
         for (int lure = 0; lure <= 6; lure++) {
             for (int roll = 100; roll <= 600; roll++) {
-                int wait = ActivityMath.fishingWaitRoll(roll, lure) - lure * 100;
+                int wait = ActivityMath.fishingWaitRoll(roll, lure * 100) - lure * 100;
                 assertEquals(Math.max(20, roll - lure * 100), wait);
             }
         }

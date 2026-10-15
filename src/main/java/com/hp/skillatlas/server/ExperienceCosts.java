@@ -3,8 +3,8 @@ package com.hp.skillatlas.server;
 import com.hp.skillatlas.data.ExperienceMath;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.entity.player.PlayerXpEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerXpEvent;
 
 public final class ExperienceCosts {
     private ExperienceCosts() {
@@ -23,7 +23,7 @@ public final class ExperienceCosts {
             return true;
         }
         PlayerXpEvent.XpChange event = new PlayerXpEvent.XpChange(player, -amount);
-        if (MinecraftForge.EVENT_BUS.post(event) || event.getAmount() != -amount) {
+        if (NeoForge.EVENT_BUS.post(event).isCanceled() || event.getAmount() != -amount) {
             return false;
         }
         balance = available(player);

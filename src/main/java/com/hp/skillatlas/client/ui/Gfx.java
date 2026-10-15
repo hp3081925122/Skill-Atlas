@@ -3,6 +3,7 @@ package com.hp.skillatlas.client.ui;
 import com.hp.skillatlas.SkillAtlas;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -30,7 +31,8 @@ public final class Gfx {
     private static final int TEX = 2;
     private static final float TEXT_Z = 300.0F;
 
-    private static final BufferBuilder BUF = new BufferBuilder(1 << 16);
+    private static final ByteBufferBuilder MEMORY = new ByteBufferBuilder(1 << 16);
+    private static BufferBuilder BUF;
     private static final Deque<int[]> CLIPS = new ArrayDeque<>();
     private static GuiGraphics g;
     private static double scale = 1.0D;
@@ -79,10 +81,10 @@ public final class Gfx {
         flush();
         mode = m;
         if (m == COLOR) {
-            BUF.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+            BUF = new BufferBuilder(MEMORY, VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
         } else {
             texture = tex;
-            BUF.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR_TEX);
+            BUF = new BufferBuilder(MEMORY, VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         }
     }
 
@@ -99,11 +101,11 @@ public final class Gfx {
         if (m == COLOR) {
             RenderSystem.setShader(GameRenderer::getPositionColorShader);
         } else {
-            RenderSystem.setShader(GameRenderer::getPositionColorTexShader);
+            RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
             RenderSystem.setShaderTexture(0, texture);
         }
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        BufferUploader.drawWithShader(BUF.end());
+        BufferUploader.drawWithShader(BUF.buildOrThrow());
         RenderSystem.enableCull();
         RenderSystem.enableDepthTest();
     }
@@ -124,10 +126,10 @@ public final class Gfx {
         int r = (argb >> 16) & 0xFF;
         int gr = (argb >> 8) & 0xFF;
         int b = argb & 0xFF;
-        BUF.vertex(m, x, y, 0).color(r, gr, b, a).endVertex();
-        BUF.vertex(m, x, y + h, 0).color(r, gr, b, a).endVertex();
-        BUF.vertex(m, x + w, y + h, 0).color(r, gr, b, a).endVertex();
-        BUF.vertex(m, x + w, y, 0).color(r, gr, b, a).endVertex();
+        BUF.addVertex(m, x, y, 0).setColor(r, gr, b, a);
+        BUF.addVertex(m, x, y + h, 0).setColor(r, gr, b, a);
+        BUF.addVertex(m, x + w, y + h, 0).setColor(r, gr, b, a);
+        BUF.addVertex(m, x + w, y, 0).setColor(r, gr, b, a);
     }
 
     public static void outline(float x, float y, float w, float h, float t, int argb) {
@@ -160,10 +162,10 @@ public final class Gfx {
         int r = (argb >> 16) & 0xFF;
         int gr = (argb >> 8) & 0xFF;
         int b = argb & 0xFF;
-        BUF.vertex(m, x1, y1, 0).color(r, gr, b, a).endVertex();
-        BUF.vertex(m, x2, y2, 0).color(r, gr, b, a).endVertex();
-        BUF.vertex(m, x3, y3, 0).color(r, gr, b, a).endVertex();
-        BUF.vertex(m, x4, y4, 0).color(r, gr, b, a).endVertex();
+        BUF.addVertex(m, x1, y1, 0).setColor(r, gr, b, a);
+        BUF.addVertex(m, x2, y2, 0).setColor(r, gr, b, a);
+        BUF.addVertex(m, x3, y3, 0).setColor(r, gr, b, a);
+        BUF.addVertex(m, x4, y4, 0).setColor(r, gr, b, a);
     }
 
     public static void sprite(Sprites.Sprite s, float x, float y, float w, float h) {
@@ -219,10 +221,10 @@ public final class Gfx {
         int r = (argb >> 16) & 0xFF;
         int gr = (argb >> 8) & 0xFF;
         int b = argb & 0xFF;
-        BUF.vertex(m, x, y, 0).color(r, gr, b, a).uv(u0, v0).endVertex();
-        BUF.vertex(m, x, y + h, 0).color(r, gr, b, a).uv(u0, v1).endVertex();
-        BUF.vertex(m, x + w, y + h, 0).color(r, gr, b, a).uv(u1, v1).endVertex();
-        BUF.vertex(m, x + w, y, 0).color(r, gr, b, a).uv(u1, v0).endVertex();
+        BUF.addVertex(m, x, y, 0).setColor(r, gr, b, a).setUv(u0, v0);
+        BUF.addVertex(m, x, y + h, 0).setColor(r, gr, b, a).setUv(u0, v1);
+        BUF.addVertex(m, x + w, y + h, 0).setColor(r, gr, b, a).setUv(u1, v1);
+        BUF.addVertex(m, x + w, y, 0).setColor(r, gr, b, a).setUv(u1, v0);
     }
 
     public static void texture(ResourceLocation tex, float x, float y, float w, float h, int argb) {
@@ -236,10 +238,10 @@ public final class Gfx {
         int r = (argb >> 16) & 0xFF;
         int gr = (argb >> 8) & 0xFF;
         int b = argb & 0xFF;
-        BUF.vertex(m, x, y, 0).color(r, gr, b, a).uv(u0, v0).endVertex();
-        BUF.vertex(m, x, y + h, 0).color(r, gr, b, a).uv(u0, v1).endVertex();
-        BUF.vertex(m, x + w, y + h, 0).color(r, gr, b, a).uv(u1, v1).endVertex();
-        BUF.vertex(m, x + w, y, 0).color(r, gr, b, a).uv(u1, v0).endVertex();
+        BUF.addVertex(m, x, y, 0).setColor(r, gr, b, a).setUv(u0, v0);
+        BUF.addVertex(m, x, y + h, 0).setColor(r, gr, b, a).setUv(u0, v1);
+        BUF.addVertex(m, x + w, y + h, 0).setColor(r, gr, b, a).setUv(u1, v1);
+        BUF.addVertex(m, x + w, y, 0).setColor(r, gr, b, a).setUv(u1, v0);
     }
 
     public static void item(ItemStack stack, float x, float y, float size) {

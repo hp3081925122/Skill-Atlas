@@ -2,7 +2,7 @@ package com.hp.skillatlas.server;
 
 import com.hp.skillatlas.SkillAtlas;
 import com.hp.skillatlas.SkillAttributes;
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.world.entity.Entity;
@@ -19,19 +19,22 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.loot.IGlobalLootModifier;
-import net.minecraftforge.common.loot.LootModifier;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.neoforge.common.loot.IGlobalLootModifier;
+import net.neoforged.neoforge.common.loot.LootModifier;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 
 import java.util.Map;
 
 public final class FortuneModifier extends LootModifier {
-    public static final DeferredRegister<Codec<? extends IGlobalLootModifier>> SERIALIZERS = DeferredRegister.create(ForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS, SkillAtlas.MOD_ID);
-    public static final RegistryObject<Codec<FortuneModifier>> CODEC = SERIALIZERS.register("fortune", () -> RecordCodecBuilder.create(inst -> codecStart(inst).apply(inst, FortuneModifier::new)));
-    public static final RegistryObject<Codec<StoneMineralsModifier>> STONE_MINERALS = SERIALIZERS.register("stone_minerals", () -> StoneMineralsModifier.CODEC);
+    public static final DeferredRegister<MapCodec<? extends IGlobalLootModifier>> SERIALIZERS = DeferredRegister.create(NeoForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS, SkillAtlas.MOD_ID);
+    public static final DeferredHolder<MapCodec<? extends IGlobalLootModifier>, MapCodec<FortuneModifier>> CODEC = SERIALIZERS.register("fortune", () -> RecordCodecBuilder.mapCodec(inst -> codecStart(inst).apply(inst, FortuneModifier::new)));
+    public static final DeferredHolder<MapCodec<? extends IGlobalLootModifier>, MapCodec<StoneMineralsModifier>> STONE_MINERALS = SERIALIZERS.register("stone_minerals", () -> StoneMineralsModifier.CODEC);
     private static final ThreadLocal<Boolean> ACTIVE = ThreadLocal.withInitial(() -> false);
 
     public FortuneModifier(LootItemCondition[] conditions) {
@@ -58,11 +61,14 @@ public final class FortuneModifier extends LootModifier {
         if (state == null || tool == null || origin == null || !(entity instanceof Player player)) {
             return loot;
         }
-        if (!state.getBlock().getLootTable().equals(ctx.getQueriedLootTableId())) {
+        if (!state.getBlock().getLootTable().location().equals(ctx.getQueriedLootTableId())) {
             return loot;
         }
+        var registry = ctx.getLevel().registryAccess().registryOrThrow(Registries.ENCHANTMENT);
+        var silkTouch = registry.getHolderOrThrow(Enchantments.SILK_TOUCH);
+        var fortune = registry.getHolderOrThrow(Enchantments.FORTUNE);
         double value = SkillAttributes.value(player, SkillAttributes.FORTUNE);
-        if (value <= 0.0D || EnchantmentHelper.getItemEnchantmentLevel(Enchantments.SILK_TOUCH, tool) > 0) {
+        if (value <= 0.0D || EnchantmentHelper.getItemEnchantmentLevel(silkTouch, tool) > 0) {
             return loot;
         }
         int bonus = SkillAttributes.roll(value, player.getRandom());
@@ -70,10 +76,8 @@ public final class FortuneModifier extends LootModifier {
             return loot;
         }
         ItemStack boosted = tool.copy();
-        Map<Enchantment, Integer> enchantments = EnchantmentHelper.getEnchantments(boosted);
-        int base = enchantments.getOrDefault(Enchantments.BLOCK_FORTUNE, 0);
-        enchantments.put(Enchantments.BLOCK_FORTUNE, base + bonus);
-        EnchantmentHelper.setEnchantments(enchantments, boosted);
+        int base = EnchantmentHelper.getEnchantmentsForCrafting(boosted).getLevel(fortune);
+        EnchantmentHelper.updateEnchantments(boosted, enchantments -> enchantments.set(fortune, base + bonus));
         LootParams params = new LootParams.Builder(ctx.getLevel())
                 .withParameter(LootContextParams.ORIGIN, origin)
                 .withParameter(LootContextParams.BLOCK_STATE, state)
@@ -82,7 +86,7 @@ public final class FortuneModifier extends LootModifier {
                 .withOptionalParameter(LootContextParams.BLOCK_ENTITY, ctx.getParamOrNull(LootContextParams.BLOCK_ENTITY))
                 .withOptionalParameter(LootContextParams.EXPLOSION_RADIUS, ctx.getParamOrNull(LootContextParams.EXPLOSION_RADIUS))
                 .create(LootContextParamSets.BLOCK);
-        LootTable table = ctx.getLevel().getServer().getLootData().getLootTable(ctx.getQueriedLootTableId());
+        LootTable table = ctx.getLevel().getServer().reloadableRegistries().getLootTable(ResourceKey.create(Registries.LOOT_TABLE, ctx.getQueriedLootTableId()));
         ACTIVE.set(true);
         try {
             ObjectArrayList<ItemStack> rerolled = table.getRandomItems(params);
@@ -94,7 +98,7 @@ public final class FortuneModifier extends LootModifier {
     }
 
     @Override
-    public Codec<? extends IGlobalLootModifier> codec() {
+    public MapCodec<? extends IGlobalLootModifier> codec() {
         return CODEC.get();
     }
 }

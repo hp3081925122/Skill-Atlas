@@ -4,16 +4,17 @@ import com.hp.skillatlas.SkillAttributes;
 import com.hp.skillatlas.server.FurnaceSkills;
 import com.hp.skillatlas.server.FurnaceState;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.Tags;
+import net.neoforged.neoforge.common.Tags;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -36,7 +37,7 @@ public abstract class FurnaceSkillsMixin implements FurnaceState {
     @Unique private UUID skillAtlas$operator;
     @Unique private double skillAtlas$progressCarry;
     @Unique private boolean skillAtlas$rawInput;
-    @Unique private ItemStack skillAtlas$assembled = ItemStack.EMPTY;
+    @Unique private int skillAtlas$outputBefore;
 
     @Override public UUID skillAtlas$owner() { return skillAtlas$operator; }
     @Override public void skillAtlas$owner(UUID owner) { skillAtlas$operator = owner; }
@@ -49,7 +50,7 @@ public abstract class FurnaceSkillsMixin implements FurnaceState {
     @Override public void skillAtlas$burnTime(int time) { litTime = time; }
 
     @Inject(method = "saveAdditional", at = @At("TAIL"))
-    private void skillAtlas$save(CompoundTag tag, CallbackInfo ci) {
+    private void skillAtlas$save(CompoundTag tag, HolderLookup.Provider registries, CallbackInfo ci) {
         if (skillAtlas$operator != null) {
             tag.putUUID("SkillAtlasOperator", skillAtlas$operator);
         } else {
@@ -62,8 +63,8 @@ public abstract class FurnaceSkillsMixin implements FurnaceState {
         tag.putInt("SkillAtlasFuelDuration", litDuration);
     }
 
-    @Inject(method = "load", at = @At("TAIL"))
-    private void skillAtlas$load(CompoundTag tag, CallbackInfo ci) {
+    @Inject(method = "loadAdditional", at = @At("TAIL"))
+    private void skillAtlas$load(CompoundTag tag, HolderLookup.Provider registries, CallbackInfo ci) {
         skillAtlas$operator = tag.hasUUID("SkillAtlasOperator") ? tag.getUUID("SkillAtlasOperator") : null;
         double carry = tag.getDouble("SkillAtlasProgressCarry");
         skillAtlas$progressCarry = Double.isFinite(carry) ? Math.max(0, Math.min(Math.nextDown(1.0D), carry)) : 0;
@@ -89,37 +90,30 @@ public abstract class FurnaceSkillsMixin implements FurnaceState {
     }
 
     @Inject(method = "burn", at = @At("HEAD"))
-    private void skillAtlas$beforeSmelt(RegistryAccess registry, Recipe<?> recipe, NonNullList<ItemStack> items, int limit, CallbackInfoReturnable<Boolean> cir) {
-        skillAtlas$rawInput = items.get(0).is(Tags.Items.RAW_MATERIALS);
-        skillAtlas$assembled = ItemStack.EMPTY;
-    }
-
-    @Redirect(method = "burn", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/crafting/Recipe;assemble(Lnet/minecraft/world/Container;Lnet/minecraft/core/RegistryAccess;)Lnet/minecraft/world/item/ItemStack;"))
-    private ItemStack skillAtlas$assembled(Recipe<Container> recipe, Container container, RegistryAccess registry) {
-        ItemStack result = recipe.assemble(container, registry);
-        skillAtlas$assembled = result.copy();
-        return result;
+    private static void skillAtlas$beforeSmelt(RegistryAccess registry, RecipeHolder<?> recipe, NonNullList<ItemStack> items, int limit, AbstractFurnaceBlockEntity furnace, CallbackInfoReturnable<Boolean> cir) {
+        FurnaceSkillsMixin state = (FurnaceSkillsMixin) (Object) furnace;
+        state.skillAtlas$rawInput = items.get(0).is(Tags.Items.RAW_MATERIALS);
+        state.skillAtlas$outputBefore = items.get(2).getCount();
     }
 
     @Inject(method = "burn", at = @At("RETURN"))
-    private void skillAtlas$afterSmelt(RegistryAccess registry, Recipe<?> recipe, NonNullList<ItemStack> items, int limit, CallbackInfoReturnable<Boolean> cir) {
-        if (cir.getReturnValue() && skillAtlas$rawInput && !skillAtlas$assembled.isEmpty()) {
-            AbstractFurnaceBlockEntity furnace = (AbstractFurnaceBlockEntity) (Object) this;
+    private static void skillAtlas$afterSmelt(RegistryAccess registry, RecipeHolder<?> recipe, NonNullList<ItemStack> items, int limit, AbstractFurnaceBlockEntity furnace, CallbackInfoReturnable<Boolean> cir) {
+        FurnaceSkillsMixin state = (FurnaceSkillsMixin) (Object) furnace;
+        if (cir.getReturnValue() && state.skillAtlas$rawInput) {
             double chance = FurnaceSkills.value(furnace, SkillAttributes.RAW_ORE_DOUBLE_CHANCE);
             ItemStack output = items.get(2);
-            int extra = skillAtlas$assembled.getCount();
-            if (chance > 0 && ItemStack.isSameItemSameTags(output, skillAtlas$assembled)
-                    && output.getCount() + extra <= Math.min(limit, output.getMaxStackSize())
+            int extra = output.getCount() - state.skillAtlas$outputBefore;
+            if (chance > 0 && extra > 0 && output.getCount() + extra <= Math.min(limit, output.getMaxStackSize())
                     && furnace.getLevel().getRandom().nextDouble() < chance / 100.0D) {
                 output.grow(extra);
             }
         }
-        skillAtlas$assembled = ItemStack.EMPTY;
-        skillAtlas$rawInput = false;
+        state.skillAtlas$outputBefore = 0;
+        state.skillAtlas$rawInput = false;
     }
 
     @Redirect(method = "awardUsedRecipesAndPopExperience", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/entity/AbstractFurnaceBlockEntity;getRecipesToAwardAndPopExperience(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/phys/Vec3;)Ljava/util/List;"))
-    private List<Recipe<?>> skillAtlas$experienceContext(AbstractFurnaceBlockEntity furnace, ServerLevel level, Vec3 pos) {
+    private List<RecipeHolder<?>> skillAtlas$experienceContext(AbstractFurnaceBlockEntity furnace, ServerLevel level, Vec3 pos) {
         return FurnaceSkills.collectExperience(furnace, level, pos);
     }
 

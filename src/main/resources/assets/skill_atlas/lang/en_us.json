@@ -365,7 +365,7 @@
   "skill_atlas.ui.add": "Add",
   "skill_atlas.ui.and_more": "%s and %s more",
   "skill_atlas.ui.any": "anything",
-  "skill_atlas.tag.forge.ores": "ores",
+  "skill_atlas.tag.c.ores": "ores",
   "skill_atlas.tag.minecraft.fall_damage_immune": "Immune to Fall Damage",
   "skill_atlas.ui.any_hostile": "any hostile mob",
   "skill_atlas.ui.hostile_of": "%s (hostile only)",

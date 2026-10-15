@@ -10,7 +10,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.EnchantmentMenu;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.item.enchantment.Enchantment;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,7 +38,7 @@ public final class EnchantingTooltip {
         CompoundTag preview = ((EnchantmentMenuState) menu).skillAtlas$preview();
         if (slot < 0 || preview.isEmpty() || preview.getInt("Seed") != menu.getEnchantmentSeed()
                 || !Arrays.equals(preview.getIntArray("Costs"), menu.costs)
-                || !ItemStack.isSameItemSameTags(ItemStack.of(preview.getCompound("Input")), menu.getSlot(0).getItem())) {
+                || !ItemStack.isSameItemSameComponents(ItemStack.parseOptional(player.registryAccess(), preview.getCompound("Input")), menu.getSlot(0).getItem())) {
             return original;
         }
         var offers = preview.getList("Offers", Tag.TAG_COMPOUND);
@@ -48,9 +49,9 @@ public final class EnchantingTooltip {
         List<Component> lines = new ArrayList<>();
         for (int i = 0; i < entries.size(); i++) {
             CompoundTag entry = entries.getCompound(i);
-            var enchantment = ForgeRegistries.ENCHANTMENTS.getValue(new ResourceLocation(entry.getString("Id")));
+            var enchantment = player.registryAccess().registryOrThrow(Registries.ENCHANTMENT).getHolder(ResourceLocation.parse(entry.getString("Id"))).orElse(null);
             if (enchantment != null) {
-                lines.add(enchantment.getFullname(entry.getInt("Level")));
+                lines.add(Enchantment.getFullname(enchantment, entry.getInt("Level")));
             }
         }
         if (lines.isEmpty()) {

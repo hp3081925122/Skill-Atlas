@@ -7,6 +7,7 @@ import com.hp.skillatlas.server.EnchantingPreviews;
 import com.hp.skillatlas.server.EnchantingTransactions;
 import com.hp.skillatlas.server.EnchantmentMenuState;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.Container;
@@ -34,13 +35,13 @@ import java.util.function.BiConsumer;
 @Mixin(EnchantmentMenu.class)
 public abstract class EnchantmentMenuMixin implements EnchantmentMenuState {
     @Shadow @Final private RandomSource random;
-    @Shadow private List<EnchantmentInstance> getEnchantmentList(ItemStack stack, int slot, int cost) { throw new AssertionError(); }
+    @Shadow private List<EnchantmentInstance> getEnchantmentList(RegistryAccess registries, ItemStack stack, int slot, int cost) { throw new AssertionError(); }
     @Unique private Player skillAtlas$player;
     @Unique private CompoundTag skillAtlas$preview = new CompoundTag();
 
     @Override
     public List<EnchantmentInstance> skillAtlas$options(ItemStack stack, int slot, int cost) {
-        return getEnchantmentList(stack, slot, cost);
+        return getEnchantmentList(skillAtlas$player.registryAccess(), stack, slot, cost);
     }
 
     @Override public CompoundTag skillAtlas$preview() { return skillAtlas$preview; }
@@ -62,7 +63,7 @@ public abstract class EnchantmentMenuMixin implements EnchantmentMenuState {
     }
 
     @Inject(method = "getEnchantmentList", at = @At("RETURN"), cancellable = true)
-    private void skillAtlas$boostLevels(ItemStack stack, int slot, int cost, CallbackInfoReturnable<List<EnchantmentInstance>> cir) {
+    private void skillAtlas$boostLevels(RegistryAccess registries, ItemStack stack, int slot, int cost, CallbackInfoReturnable<List<EnchantmentInstance>> cir) {
         if (skillAtlas$player == null) {
             return;
         }

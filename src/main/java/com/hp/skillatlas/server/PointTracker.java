@@ -17,8 +17,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.util.FakePlayer;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.common.util.FakePlayer;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -59,9 +59,9 @@ public final class PointTracker {
             List<ResourceLocation> tags = new ArrayList<>();
             for (String t : p.targets) {
                 if (t.startsWith("#")) {
-                    tags.add(new ResourceLocation(t.substring(1)));
+                    tags.add(ResourceLocation.parse(t.substring(1)));
                 } else {
-                    ids.add(new ResourceLocation(t));
+                    ids.add(ResourceLocation.parse(t));
                 }
             }
             RULES.computeIfAbsent(p.method, k -> new ArrayList<>()).add(new Compiled(p, ids, tags));
@@ -87,7 +87,7 @@ public final class PointTracker {
             return;
         }
         EntityType<?> type = victim.getType();
-        ResourceLocation id = ForgeRegistries.ENTITY_TYPES.getKey(type);
+        ResourceLocation id = BuiltInRegistries.ENTITY_TYPE.getKey(type);
         boolean hostile = victim instanceof Enemy;
         SkillAtlas.LOGGER.debug("Kill tracked: player={}, entity={}, hostile={}", player.getGameProfile().getName(), id, hostile);
         for (Compiled c : rules(RuleType.KILL)) {
@@ -104,7 +104,7 @@ public final class PointTracker {
         if (rules(RuleType.MINE).isEmpty() || state.isAir() || !counts(player)) {
             return;
         }
-        ResourceLocation id = ForgeRegistries.BLOCKS.getKey(state.getBlock());
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
         for (Compiled c : rules(RuleType.MINE)) {
             if (c.matches(id, t -> state.is(TagKey.create(Registries.BLOCK, t)))) {
                 progress(player, c.pool, 1);
@@ -116,7 +116,7 @@ public final class PointTracker {
         if (rules(type).isEmpty() || stack.isEmpty() || !counts(player)) {
             return;
         }
-        ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         for (Compiled c : rules(type)) {
             if (c.matches(id, t -> stack.is(TagKey.create(Registries.ITEM, t)))) {
                 progress(player, c.pool, stack.getCount());
@@ -128,7 +128,7 @@ public final class PointTracker {
         if (!counts(player)) {
             return;
         }
-        ResourceLocation id = ForgeRegistries.BLOCKS.getKey(state.getBlock());
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
         for (Compiled c : rules(RuleType.HARVEST)) {
             if (c.matches(id, t -> state.is(TagKey.create(Registries.BLOCK, t)))) {
                 progress(player, c.pool, 1);
@@ -142,7 +142,7 @@ public final class PointTracker {
         }
         for (Compiled c : rules(RuleType.FISH)) {
             boolean matches = drops.stream().filter(stack -> !stack.isEmpty()).anyMatch(stack ->
-                    c.matches(ForgeRegistries.ITEMS.getKey(stack.getItem()), t -> stack.is(TagKey.create(Registries.ITEM, t))));
+                    c.matches(BuiltInRegistries.ITEM.getKey(stack.getItem()), t -> stack.is(TagKey.create(Registries.ITEM, t))));
             if (matches) {
                 progress(player, c.pool, 1);
             }

@@ -26,8 +26,8 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.fml.loading.FMLPaths;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.fml.loading.FMLPaths;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -376,7 +376,7 @@ public final class AtlasServer {
 
     public static void sendFull(ServerPlayer player) {
         for (Payload p : full()) {
-            AtlasNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), p);
+            PacketDistributor.sendToPlayer(player, p);
         }
     }
 
@@ -396,11 +396,11 @@ public final class AtlasServer {
         CompoundTag tag = current.save();
         tag.remove("payments");
         tag.remove("seeded");
-        AtlasNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ProgressPacket(tag, canEdit(player)));
+        PacketDistributor.sendToPlayer(player, new ProgressPacket(tag, canEdit(player)));
     }
 
     public static void result(ServerPlayer player, int request, boolean ok, String key, List<String> args) {
-        AtlasNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new ResultPacket(request, ok, key, args));
+        PacketDistributor.sendToPlayer(player, new ResultPacket(request, ok, key, args));
     }
 
     public static void receive(ServerPlayer player, Payload p) {
@@ -472,7 +472,7 @@ public final class AtlasServer {
             List<Payload> patch = Payload.split(Payload.PATCH, EditOps.patch(definition, changes, revision), Payload.TO_CLIENT_CHUNK);
             for (ServerPlayer target : server.getPlayerList().getPlayers()) {
                 for (Payload part : patch) {
-                    AtlasNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> target), part);
+                    PacketDistributor.sendToPlayer(target, part);
                 }
             }
             definitionChanged(changes.shrunk);

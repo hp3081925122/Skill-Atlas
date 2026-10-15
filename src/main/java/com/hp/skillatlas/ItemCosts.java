@@ -5,12 +5,13 @@ import com.hp.skillatlas.data.ItemPlan;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,10 +27,10 @@ public final class ItemCosts {
 
     public static Item item(String id) {
         ResourceLocation rl = ResourceLocation.tryParse(id);
-        if (rl == null || !ForgeRegistries.ITEMS.containsKey(rl)) {
+        if (rl == null || !BuiltInRegistries.ITEM.containsKey(rl)) {
             return Items.AIR;
         }
-        Item item = ForgeRegistries.ITEMS.getValue(rl);
+        Item item = BuiltInRegistries.ITEM.get(rl);
         if (item == null) {
             return Items.AIR;
         }
@@ -56,15 +57,35 @@ public final class ItemCosts {
         return out;
     }
 
-    private static int[] plan(List<ItemStack> slots, List<ItemCost> costs, int[] got) {
+    public static String serialize(ItemStack stack, HolderLookup.Provider registries) {
+        return stack.copyWithCount(1).save(registries).toString();
+    }
+
+    public static ItemStack stack(String id, String nbt, HolderLookup.Provider registries) {
+        Item item = item(id);
+        if (item == Items.AIR) {
+            return ItemStack.EMPTY;
+        }
+        if (nbt.isEmpty()) {
+            return new ItemStack(item);
+        }
+        CompoundTag data = tag(nbt);
+        if (data == null) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack parsed = ItemStack.parseOptional(registries, data);
+        return parsed.is(item) ? parsed : ItemStack.EMPTY;
+    }
+
+    private static int[] plan(List<ItemStack> slots, List<ItemCost> costs, int[] got, HolderLookup.Provider registries) {
         Item[] items = new Item[costs.size()];
-        CompoundTag[] tags = new CompoundTag[costs.size()];
+        ItemStack[] exact = new ItemStack[costs.size()];
         for (int i = 0; i < costs.size(); i++) {
             ItemCost c = costs.get(i);
             items[i] = item(c.item);
             if (!c.nbt.isEmpty()) {
-                tags[i] = tag(c.nbt);
-                if (tags[i] == null) {
+                exact[i] = stack(c.item, c.nbt, registries);
+                if (exact[i].isEmpty()) {
                     items[i] = Items.AIR;
                 }
             }
@@ -75,7 +96,7 @@ public final class ItemCosts {
             ItemStack stack = slots.get(s);
             if (!stack.isEmpty()) {
                 counts[s] = stack.getCount();
-                plain[s] = stack.getTag() == null;
+                plain[s] = stack.getComponentsPatch().isEmpty();
             }
         }
         return ItemPlan.plan(costs, counts, plain, (i, s) -> {
@@ -83,10 +104,10 @@ public final class ItemCosts {
             if (items[i] == Items.AIR || !stack.is(items[i])) {
                 return false;
             }
-            if (tags[i] == null) {
+            if (exact[i] == null) {
                 return true;
             }
-            return tags[i].equals(stack.getTag());
+            return ItemStack.isSameItemSameComponents(exact[i], stack);
         }, got);
     }
 
@@ -94,13 +115,13 @@ public final class ItemCosts {
         if (costs.isEmpty()) {
             return true;
         }
-        return plan(slots(inventory), costs, new int[costs.size()]) != null;
+        return plan(slots(inventory), costs, new int[costs.size()], inventory.player.registryAccess()) != null;
     }
 
     public static int[] owned(Inventory inventory, List<ItemCost> costs) {
         int[] got = new int[costs.size()];
         if (!costs.isEmpty()) {
-            plan(slots(inventory), costs, got);
+            plan(slots(inventory), costs, got, inventory.player.registryAccess());
         }
         return got;
     }
@@ -110,7 +131,7 @@ public final class ItemCosts {
             return true;
         }
         List<ItemStack> slots = slots(inventory);
-        int[] used = plan(slots, costs, new int[costs.size()]);
+        int[] used = plan(slots, costs, new int[costs.size()], inventory.player.registryAccess());
         if (used == null) {
             return false;
         }

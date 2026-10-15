@@ -1,21 +1,21 @@
 package com.hp.skillatlas;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public final class AtlasConfig {
-    public static final ForgeConfigSpec SERVER_SPEC;
-    public static final ForgeConfigSpec.IntValue EDIT_PERMISSION;
-    public static final ForgeConfigSpec.BooleanValue COUNT_CREATIVE;
-    public static final ForgeConfigSpec.BooleanValue NOTIFY_POINTS;
+    public static final ModConfigSpec SERVER_SPEC;
+    public static final ModConfigSpec.IntValue EDIT_PERMISSION;
+    public static final ModConfigSpec.BooleanValue COUNT_CREATIVE;
+    public static final ModConfigSpec.BooleanValue NOTIFY_POINTS;
 
-    public static final ForgeConfigSpec CLIENT_SPEC;
-    public static final ForgeConfigSpec.IntValue VIRTUAL_HEIGHT;
-    public static final ForgeConfigSpec.DoubleValue PANEL_WIDTH;
-    public static final ForgeConfigSpec.DoubleValue PANEL_HEIGHT;
-    public static final ForgeConfigSpec.BooleanValue SHOW_NODE_NAMES;
+    public static final ModConfigSpec CLIENT_SPEC;
+    public static final ModConfigSpec.IntValue VIRTUAL_HEIGHT;
+    public static final ModConfigSpec.DoubleValue PANEL_WIDTH;
+    public static final ModConfigSpec.DoubleValue PANEL_HEIGHT;
+    public static final ModConfigSpec.BooleanValue SHOW_NODE_NAMES;
 
     static {
-        ForgeConfigSpec.Builder server = new ForgeConfigSpec.Builder();
+        ModConfigSpec.Builder server = new ModConfigSpec.Builder();
         EDIT_PERMISSION = server
                 .comment("编辑技能树所需的权限等级 / Permission level required to edit the skill atlas")
                 .defineInRange("editPermissionLevel", 2, 0, 4);
@@ -27,7 +27,7 @@ public final class AtlasConfig {
                 .define("notifyPointGain", true);
         SERVER_SPEC = server.build();
 
-        ForgeConfigSpec.Builder client = new ForgeConfigSpec.Builder();
+        ModConfigSpec.Builder client = new ModConfigSpec.Builder();
         VIRTUAL_HEIGHT = client
                 .comment("界面虚拟高度，数值越大界面越小，与原版界面尺寸设置无关 / Virtual UI height; larger values make the atlas smaller, independent of the vanilla GUI scale")
                 .defineInRange("virtualHeight", 360, 200, 1200);
