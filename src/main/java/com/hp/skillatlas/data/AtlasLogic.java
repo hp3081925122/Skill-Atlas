@@ -1,5 +1,6 @@
 package com.hp.skillatlas.data;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -9,7 +10,7 @@ public final class AtlasLogic {
     }
 
     public enum Check {
-        OK, MISSING, MAXED, LOCKED, NO_POINTS, NO_EXPERIENCE, NO_ITEMS
+        OK, MISSING, MAXED, LOCKED, EXCLUDED, NO_POINTS, NO_EXPERIENCE, NO_ITEMS
     }
 
     private AtlasLogic() {
@@ -36,6 +37,31 @@ public final class AtlasLogic {
         return met > 0;
     }
 
+    public static List<SkillNode> choices(AtlasDefinition d, SkillNode n) {
+        List<SkillNode> out = new ArrayList<>();
+        if (n.choiceGroup.isEmpty()) {
+            return out;
+        }
+        for (SkillNode o : d.nodes.values()) {
+            if (o != n && !o.id.equals(n.id) && n.choiceGroup.equals(o.choiceGroup)) {
+                out.add(o);
+            }
+        }
+        return out;
+    }
+
+    public static SkillNode excludedBy(AtlasDefinition d, SkillNode n, PlayerProgress p) {
+        if (n.choiceGroup.isEmpty() || p.level(n.id) > 0) {
+            return null;
+        }
+        for (SkillNode o : d.nodes.values()) {
+            if (o != n && !o.id.equals(n.id) && n.choiceGroup.equals(o.choiceGroup) && p.level(o.id) > 0) {
+                return o;
+            }
+        }
+        return null;
+    }
+
     public static boolean visible(AtlasDefinition d, SkillNode n, PlayerProgress p) {
         if (!n.hidden || p.level(n.id) > 0) {
             return true;
@@ -54,6 +80,9 @@ public final class AtlasLogic {
         int level = p.level(n.id);
         if (level >= n.maxLevel()) {
             return Check.MAXED;
+        }
+        if (excludedBy(d, n, p) != null) {
+            return Check.EXCLUDED;
         }
         if (!prerequisitesMet(d, n, p)) {
             return Check.LOCKED;
@@ -88,7 +117,7 @@ public final class AtlasLogic {
             }
             return State.LEARNED;
         }
-        if (c == Check.LOCKED) {
+        if (c == Check.LOCKED || c == Check.EXCLUDED) {
             return State.LOCKED;
         }
         if (c == Check.OK) {

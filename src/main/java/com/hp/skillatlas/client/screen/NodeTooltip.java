@@ -41,7 +41,11 @@ public final class NodeTooltip {
         AtlasLogic.State state = AtlasLogic.state(d, n, p, ClientAtlas::hasItems, ClientAtlas.experiencePoints());
         int level = Math.min(p.level(n.id), n.maxLevel());
         int stateColor = Names.stateColor(state) & 0xFFFFFF;
+        SkillNode excluder = AtlasLogic.excludedBy(d, n, p);
         MutableComponent line = Names.state(state).withStyle(s -> s.withColor(stateColor));
+        if (excluder != null) {
+            line = Component.translatable("skill_atlas.state.excluded").withStyle(s -> s.withColor(BAD));
+        }
         if (n.maxLevel() > 1 || level > 0) {
             line = line.append(Component.literal("  ")).append(Component.translatable("skill_atlas.ui.level", level, n.maxLevel()).withStyle(s -> s.withColor(MUTED)));
         }
@@ -119,6 +123,17 @@ public final class NodeTooltip {
                 out.add(prerequisite(pre));
             }
         }
+        List<SkillNode> choices = AtlasLogic.choices(d, n);
+        if (!choices.isEmpty() && hints && (level == 0 || details)) {
+            out.add(Component.empty());
+            out.add(Component.translatable("skill_atlas.ui.choice_group").withStyle(s -> s.withColor(HEADER)));
+            for (SkillNode c : choices) {
+                out.add(choice(c));
+            }
+            if (excluder != null) {
+                out.add(Component.translatable("skill_atlas.ui.choice_excluded", Names.node(excluder)).withStyle(s -> s.withColor(BAD)));
+            }
+        }
         if (hints) {
             if (ClientAtlas.editMode) {
                 out.add(Component.empty());
@@ -133,6 +148,17 @@ public final class NodeTooltip {
 
     public static List<Prerequisite> prerequisites(SkillNode n) {
         return n.prerequisites.stream().filter(pre -> ClientAtlas.definition.nodes.containsKey(pre.node)).toList();
+    }
+
+    public static MutableComponent choice(SkillNode node) {
+        String mark = " • ";
+        int markColor = MUTED;
+        if (ClientAtlas.progress.level(node.id) > 0) {
+            mark = " ✔ ";
+            markColor = BAD;
+        }
+        int color = markColor;
+        return Component.literal(mark).withStyle(s -> s.withColor(color)).append(Names.node(node));
     }
 
     public static MutableComponent prerequisite(Prerequisite pre) {

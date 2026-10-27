@@ -103,37 +103,30 @@ public final class InfoDialog extends Dialog {
             scroll.add(heading);
             cy += heading.h + 1;
             for (Prerequisite pre : prerequisites) {
-                Label link = new Label(NodeTooltip.prerequisite(pre), Theme.TEXT) {
-                    @Override
-                    public void render(float pt) {
-                        if (hovered()) {
-                            Gfx.fill(x, y, w, h, Theme.ROW_HOVER);
-                        }
-                        super.render(pt);
-                    }
-
-                    @Override
-                    public boolean mouseDown(double mx, double my, int button) {
-                        if (button != 0) {
-                            return false;
-                        }
-                        SkillNode target = ClientAtlas.definition.nodes.get(pre.node);
-                        if (target != null) {
-                            Sounds.click();
-                            AtlasScreen screen = AtlasScreen.current();
-                            if (screen != null && screen.main() != null) {
-                                screen.main().jumpTo(target);
-                            }
-                            InfoDialog.this.close();
-                            stack.push(new InfoDialog(target.id));
-                        }
-                        return true;
-                    }
-                }.wrapped(width);
-                link.tip(Component.translatable("skill_atlas.ui.prerequisite_jump", Names.nodeById(pre.node)));
+                Label link = nodeLink(pre.node, NodeTooltip.prerequisite(pre), width);
                 link.bounds(scroll.x + 2, cy, width, link.h);
                 scroll.add(link);
                 cy += link.h + 2;
+            }
+        }
+        List<SkillNode> choices = AtlasLogic.choices(ClientAtlas.definition, n);
+        if (!choices.isEmpty()) {
+            cy += 5;
+            Label heading = new Label(Component.translatable("skill_atlas.ui.choice_group"), Theme.GOLD).wrapped(width);
+            heading.bounds(scroll.x + 2, cy, width, heading.h);
+            scroll.add(heading);
+            cy += heading.h + 1;
+            for (SkillNode choice : choices) {
+                Label link = nodeLink(choice.id, NodeTooltip.choice(choice), width);
+                link.bounds(scroll.x + 2, cy, width, link.h);
+                scroll.add(link);
+                cy += link.h + 2;
+            }
+            SkillNode excluder = AtlasLogic.excludedBy(ClientAtlas.definition, n, ClientAtlas.progress);
+            if (excluder != null) {
+                Label excluded = new Label(Component.translatable("skill_atlas.ui.choice_excluded", Names.node(excluder)), Theme.RED).wrapped(width);
+                excluded.bounds(scroll.x + 2, cy, width, excluded.h);
+                scroll.add(excluded);
             }
         }
         scroll.rebuilt();
@@ -148,6 +141,38 @@ public final class InfoDialog extends Dialog {
             learn.tip(Component.translatable("skill_atlas.learn." + check.name().toLowerCase(java.util.Locale.ROOT), Names.node(n)));
         }
         footer(new Button(Component.translatable("skill_atlas.ui.close"), this::close), learn);
+    }
+
+    private Label nodeLink(String id, Component text, float width) {
+        Label link = new Label(text, Theme.TEXT) {
+            @Override
+            public void render(float pt) {
+                if (hovered()) {
+                    Gfx.fill(x, y, w, h, Theme.ROW_HOVER);
+                }
+                super.render(pt);
+            }
+
+            @Override
+            public boolean mouseDown(double mx, double my, int button) {
+                if (button != 0) {
+                    return false;
+                }
+                SkillNode target = ClientAtlas.definition.nodes.get(id);
+                if (target != null) {
+                    Sounds.click();
+                    AtlasScreen screen = AtlasScreen.current();
+                    if (screen != null && screen.main() != null) {
+                        screen.main().jumpTo(target);
+                    }
+                    InfoDialog.this.close();
+                    stack.push(new InfoDialog(target.id));
+                }
+                return true;
+            }
+        }.wrapped(width);
+        link.tip(Component.translatable("skill_atlas.ui.prerequisite_jump", Names.nodeById(id)));
+        return link;
     }
 
     @Override

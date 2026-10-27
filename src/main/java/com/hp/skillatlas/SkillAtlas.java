@@ -21,6 +21,11 @@ public final class SkillAtlas {
         SkillAttributes.register(FMLJavaModLoadingContext.get().getModEventBus());
         FortuneModifier.register(FMLJavaModLoadingContext.get().getModEventBus());
         AtlasNetwork.register();
+        if (KubeJSSupport.active()) {
+            com.hp.skillatlas.kubejs.KubeJSCompat.init();
+        } else if (KubeJSSupport.legacyAddon()) {
+            LOGGER.warn("Standalone Skill Atlas KubeJS addon detected; built-in KubeJS integration is disabled. Remove skill_atlas_kubejs to use the built-in version.");
+        }
     }
 
     public static ResourceLocation id(String path) {
