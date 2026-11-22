@@ -9,6 +9,7 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 repositories {
     mavenCentral()
     maven { url 'https://maven.aliyun.com/repository/public'; content { includeGroup 'com.github.promeg' } }
+    maven { url = 'https://maven.latvian.dev/releases'; metadataSources { mavenPom(); artifact() }; content { includeGroup 'dev.latvian.mods' } }
 }
 neoForge {
     version = project.neo_version
@@ -26,6 +27,14 @@ dependencies {
     }
     jarJar(implementation('org.ahocorasick:ahocorasick:0.3.0')) {
         version { strictly '0.3.0'; prefer '0.3.0' }
+    }
+    compileOnly('dev.latvian.mods:kubejs-neoforge:26.1.2-8.0.7') { transitive = false }
+    compileOnly('dev.latvian.mods:rhino:2101.2.8-build.91') { transitive = false }
+    testImplementation('dev.latvian.mods:kubejs-neoforge:26.1.2-8.0.7') { transitive = false }
+    testImplementation('dev.latvian.mods:rhino:2101.2.8-build.91') { transitive = false }
+    if (project.hasProperty('withKubejs')) {
+        runtimeOnly('dev.latvian.mods:kubejs-neoforge:26.1.2-8.0.7') { transitive = false }
+        runtimeOnly('dev.latvian.mods:rhino:2101.2.8-build.91') { transitive = false }
     }
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testImplementation 'com.google.code.gson:gson:2.10.1'

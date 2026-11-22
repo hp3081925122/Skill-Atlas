@@ -2,6 +2,7 @@ package com.hp.skillatlas.client.screen;
 
 import com.hp.skillatlas.AtlasConfig;
 import com.hp.skillatlas.client.ClientAtlas;
+import com.hp.skillatlas.client.ClientEvents;
 import com.hp.skillatlas.client.Icons;
 import com.hp.skillatlas.client.Names;
 import com.hp.skillatlas.client.SearchIndex;
@@ -205,6 +206,17 @@ public final class MainLayer extends Layer {
             } else {
                 error(Component.translatable(r.key(), Names.nodeById(node)));
             }
+        } else if (r.request() == ResultPacket.REFUND) {
+            String node = r.args().isEmpty() ? "" : r.args().get(0);
+            String second = r.args().size() > 1 ? r.args().get(1) : "";
+            String cost = r.args().size() > 2 ? r.args().get(2) : "";
+            if (r.ok()) {
+                status(Component.translatable(r.key(), Names.nodeById(node), second, cost), Theme.GOLD);
+                Sounds.click();
+                canvas.pulse(node);
+            } else {
+                error(Component.translatable(r.key(), Names.nodeById(node), Names.nodeById(second), cost));
+            }
         } else if (r.request() == 0 && !r.ok()) {
             error(Names.error(r.key(), r.args()));
         }
@@ -275,6 +287,9 @@ public final class MainLayer extends Layer {
             color = Theme.DIM;
         } else {
             line = Component.translatable("skill_atlas.ui.view_hint");
+            if (ClientAtlas.refundEnabled) {
+                line = Component.translatable("skill_atlas.ui.view_hint_refund", ClientEvents.REFUND.getTranslatedKeyMessage());
+            }
             color = Theme.DIM;
         }
         float avail = right - fx - 20;

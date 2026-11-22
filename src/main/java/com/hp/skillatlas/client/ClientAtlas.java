@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.hp.skillatlas.ItemCosts;
 import com.hp.skillatlas.SkillAtlas;
 import com.hp.skillatlas.data.AtlasDefinition;
+import com.hp.skillatlas.data.AtlasLogic;
 import com.hp.skillatlas.data.AtlasTexts;
 import com.hp.skillatlas.data.Category;
 import com.hp.skillatlas.data.EditOps;
@@ -15,6 +16,7 @@ import com.hp.skillatlas.data.PointPool;
 import com.hp.skillatlas.data.SkillNode;
 import com.hp.skillatlas.network.AtlasNetwork;
 import com.hp.skillatlas.network.LearnPacket;
+import com.hp.skillatlas.network.RefundPacket;
 import com.hp.skillatlas.network.Payload;
 import com.hp.skillatlas.network.ResultPacket;
 import net.minecraft.client.Minecraft;
@@ -62,6 +64,8 @@ public final class ClientAtlas {
     public static boolean locked;
     public static boolean canEdit;
     public static boolean editMode;
+    public static boolean refundEnabled;
+    public static int refundCost;
     public static int version;
     public static int progressVersion;
     public static String category = "";
@@ -116,6 +120,8 @@ public final class ClientAtlas {
         locked = false;
         canEdit = false;
         editMode = false;
+        refundEnabled = false;
+        refundCost = 0;
         category = "";
         VIEWS.clear();
         SELECTION.clear();
@@ -188,9 +194,11 @@ public final class ClientAtlas {
         version++;
     }
 
-    public static void onProgress(PlayerProgress p, boolean edit) {
+    public static void onProgress(PlayerProgress p, boolean edit, boolean refund, int cost) {
         progress = p;
         canEdit = edit;
+        refundEnabled = refund;
+        refundCost = cost;
         if (!edit || locked) {
             editMode = false;
         }
@@ -380,6 +388,14 @@ public final class ClientAtlas {
 
     public static void learn(String node) {
         net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new LearnPacket(node));
+    }
+
+    public static void refund(String node) {
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new RefundPacket(node));
+    }
+
+    public static AtlasLogic.Refund refundCheck(SkillNode n) {
+        return AtlasLogic.refundCheck(definition, n, progress, refundEnabled, refundCost, experiencePoints());
     }
 
     public static List<SkillNode> nodesIn(String cat) {

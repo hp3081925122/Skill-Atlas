@@ -2,6 +2,7 @@ package com.hp.skillatlas.client.screen;
 
 import com.google.gson.JsonArray;
 import com.hp.skillatlas.client.ClientAtlas;
+import com.hp.skillatlas.client.GifTextures;
 import com.hp.skillatlas.client.Names;
 import com.hp.skillatlas.client.ui.Button;
 import com.hp.skillatlas.client.ui.Dialog;
@@ -96,10 +97,13 @@ public final class CanvasImageDialog extends Dialog {
             public void render(float pt) {
                 Identifier path = Identifier.tryParse(image.texture);
                 if (path != null && main.canvas.textureSize(path)[0] > 0) {
-                    float scale = Math.min((w - 8) / image.width, (h - 8) / image.height);
-                    float width = image.width * scale;
-                    float height = image.height * scale;
-                    Gfx.texture(path, x + (w - width) / 2, y + (h - height) / 2, width, height, 0xFFFFFFFF);
+                    Identifier resolved = GifTextures.resolve(path);
+                    if (resolved != null) {
+                        float scale = Math.min((w - 8) / image.width, (h - 8) / image.height);
+                        float width = image.width * scale;
+                        float height = image.height * scale;
+                        Gfx.texture(resolved, x + (w - width) / 2, y + (h - height) / 2, width, height, 0xFFFFFFFF);
+                    }
                 }
             }
         };

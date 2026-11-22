@@ -7,9 +7,10 @@ public final class AtlasNetwork {
     }
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("2612-1");
+        var registrar = event.registrar("2612-2");
         registrar.playBidirectional(Payload.TYPE, Payload.STREAM_CODEC, Payload::handle);
         registrar.playToServer(LearnPacket.TYPE, LearnPacket.STREAM_CODEC, LearnPacket::handle);
+        registrar.playToServer(RefundPacket.TYPE, RefundPacket.STREAM_CODEC, RefundPacket::handle);
         registrar.playToClient(ProgressPacket.TYPE, ProgressPacket.STREAM_CODEC);
         registrar.playToClient(ResultPacket.TYPE, ResultPacket.STREAM_CODEC);
         registrar.playToClient(EnchantingPreviewPacket.TYPE, EnchantingPreviewPacket.STREAM_CODEC);

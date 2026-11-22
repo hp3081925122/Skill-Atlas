@@ -12,6 +12,9 @@ description='''${mod_description}'''
 [[mixins]]
 config="skill_atlas.mixins.json"
 
+[[mixins]]
+config="skill_atlas.kubejs.mixins.json"
+
 [[dependencies.${mod_id}]]
 modId="neoforge"
 type="required"

@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.hp.skillatlas.AtlasConfig;
 import com.hp.skillatlas.SkillAtlas;
 import com.hp.skillatlas.client.ClientAtlas;
+import com.hp.skillatlas.client.GifTextures;
 import com.hp.skillatlas.client.Icons;
 import com.hp.skillatlas.client.Names;
 import com.hp.skillatlas.client.SearchIndex;
@@ -418,6 +419,9 @@ public final class CanvasView extends Widget {
         if (tex == null) {
             return new int[]{0, 0};
         }
+        if (GifTextures.isGif(tex)) {
+            return GifTextures.size(tex);
+        }
         return textureSizes.computeIfAbsent(tex, k -> {
             Optional<Resource> res = Minecraft.getInstance().getResourceManager().getResource(k);
             if (res.isEmpty()) {
@@ -444,7 +448,10 @@ public final class CanvasView extends Widget {
             }
             Identifier texture = Identifier.tryParse(image.texture);
             if (textureSize(texture)[0] > 0) {
-                Gfx.texture(texture, left, top, width, height, 0xFFFFFFFF);
+                Identifier resolved = GifTextures.resolve(texture);
+                if (resolved != null) {
+                    Gfx.texture(resolved, left, top, width, height, 0xFFFFFFFF);
+                }
             } else if (ClientAtlas.editMode) {
                 Gfx.outline(left, top, width, height, 1, Theme.RED);
             }
@@ -475,6 +482,12 @@ public final class CanvasView extends Widget {
                 tile = c.tile;
             }
         }
+        Identifier renderTex = GifTextures.resolve(tex);
+        if (renderTex == null) {
+            tex = DEFAULT_BACKGROUND;
+            tile = false;
+            renderTex = DEFAULT_BACKGROUND;
+        }
         int[] size = textureSize(tex);
         if (size[0] <= 0 || size[1] <= 0) {
             return;
@@ -496,7 +509,7 @@ public final class CanvasView extends Widget {
             float startY = oy - (float) Math.ceil((oy - by) / th) * th;
             for (float tx = startX; tx < bx + bw; tx += tw) {
                 for (float ty = startY; ty < by + bh; ty += th) {
-                    Gfx.texture(tex, tx, ty, tw, th, 0xFFFFFFFF);
+                    Gfx.texture(renderTex, tx, ty, tw, th, 0xFFFFFFFF);
                 }
             }
             return;
@@ -506,7 +519,7 @@ public final class CanvasView extends Widget {
         float vh = bh / scale / size[1];
         float u0 = (1 - uw) / 2;
         float v0 = (1 - vh) / 2;
-        Gfx.texture(tex, bx, by, bw, bh, u0, v0, u0 + uw, v0 + vh, 0xFFFFFFFF);
+        Gfx.texture(renderTex, bx, by, bw, bh, u0, v0, u0 + uw, v0 + vh, 0xFFFFFFFF);
     }
 
     private void renderGrid() {
@@ -1041,6 +1054,9 @@ public final class CanvasView extends Widget {
                     key = "skill_atlas.ui.upgrade";
                 }
                 menu.add(Component.translatable(key), Sprites.STAR, check == AtlasLogic.Check.OK, () -> ClientAtlas.learn(id));
+                if (ClientAtlas.refundEnabled && ClientAtlas.progress.level(id) > 0) {
+                    menu.add(Component.translatable("skill_atlas.ui.refund"), Sprites.LEFT, ClientAtlas.refundCheck(n) == AtlasLogic.Refund.OK, () -> ClientAtlas.refund(id));
+                }
             }
             main.stack.push(menu);
             return;

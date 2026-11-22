@@ -1,5 +1,6 @@
 package com.hp.skillatlas.data;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -9,7 +10,11 @@ public final class AtlasLogic {
     }
 
     public enum Check {
-        OK, MISSING, MAXED, LOCKED, NO_POINTS, NO_EXPERIENCE, NO_ITEMS
+        OK, MISSING, MAXED, LOCKED, EXCLUDED, NO_POINTS, NO_EXPERIENCE, NO_ITEMS
+    }
+
+    public enum Refund {
+        OK, MISSING, DISABLED, NOT_LEARNED, DEPENDENT, NO_EXPERIENCE
     }
 
     private AtlasLogic() {
@@ -36,6 +41,31 @@ public final class AtlasLogic {
         return met > 0;
     }
 
+    public static List<SkillNode> choices(AtlasDefinition d, SkillNode n) {
+        List<SkillNode> out = new ArrayList<>();
+        if (n.choiceGroup.isEmpty()) {
+            return out;
+        }
+        for (SkillNode o : d.nodes.values()) {
+            if (o != n && !o.id.equals(n.id) && n.choiceGroup.equals(o.choiceGroup)) {
+                out.add(o);
+            }
+        }
+        return out;
+    }
+
+    public static SkillNode excludedBy(AtlasDefinition d, SkillNode n, PlayerProgress p) {
+        if (n.choiceGroup.isEmpty() || p.level(n.id) > 0) {
+            return null;
+        }
+        for (SkillNode o : d.nodes.values()) {
+            if (o != n && !o.id.equals(n.id) && n.choiceGroup.equals(o.choiceGroup) && p.level(o.id) > 0) {
+                return o;
+            }
+        }
+        return null;
+    }
+
     public static boolean visible(AtlasDefinition d, SkillNode n, PlayerProgress p) {
         if (!n.hidden || p.level(n.id) > 0) {
             return true;
@@ -55,6 +85,9 @@ public final class AtlasLogic {
         if (level >= n.maxLevel()) {
             return Check.MAXED;
         }
+        if (excludedBy(d, n, p) != null) {
+            return Check.EXCLUDED;
+        }
         if (!prerequisitesMet(d, n, p)) {
             return Check.LOCKED;
         }
@@ -70,6 +103,58 @@ public final class AtlasLogic {
             return Check.NO_ITEMS;
         }
         return Check.OK;
+    }
+
+    public static SkillNode refundBlocker(AtlasDefinition d, SkillNode n, PlayerProgress p) {
+        int after = p.level(n.id) - 1;
+        for (SkillNode m : d.nodes.values()) {
+            if (m == n || m.id.equals(n.id) || p.level(m.id) <= 0) {
+                continue;
+            }
+            int total = 0;
+            int met = 0;
+            boolean depends = false;
+            for (Prerequisite pre : m.prerequisites) {
+                if (!d.nodes.containsKey(pre.node)) {
+                    continue;
+                }
+                total++;
+                int level = p.level(pre.node);
+                if (pre.node.equals(n.id)) {
+                    depends = true;
+                    level = after;
+                }
+                if (level > pre.level) {
+                    met++;
+                }
+            }
+            if (!depends) {
+                continue;
+            }
+            if (m.requireAll ? met < total : met == 0) {
+                return m;
+            }
+        }
+        return null;
+    }
+
+    public static Refund refundCheck(AtlasDefinition d, SkillNode n, PlayerProgress p, boolean enabled, long cost, long experience) {
+        if (n == null) {
+            return Refund.MISSING;
+        }
+        if (!enabled) {
+            return Refund.DISABLED;
+        }
+        if (p.level(n.id) <= 0) {
+            return Refund.NOT_LEARNED;
+        }
+        if (refundBlocker(d, n, p) != null) {
+            return Refund.DEPENDENT;
+        }
+        if (experience < cost) {
+            return Refund.NO_EXPERIENCE;
+        }
+        return Refund.OK;
     }
 
     public static State state(AtlasDefinition d, SkillNode n, PlayerProgress p, Predicate<List<ItemCost>> items) {
@@ -88,7 +173,7 @@ public final class AtlasLogic {
             }
             return State.LEARNED;
         }
-        if (c == Check.LOCKED) {
+        if (c == Check.LOCKED || c == Check.EXCLUDED) {
             return State.LOCKED;
         }
         if (c == Check.OK) {
