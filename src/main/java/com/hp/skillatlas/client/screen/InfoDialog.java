@@ -1,6 +1,7 @@
 package com.hp.skillatlas.client.screen;
 
 import com.hp.skillatlas.client.ClientAtlas;
+import com.hp.skillatlas.client.ClientEvents;
 import com.hp.skillatlas.client.Icons;
 import com.hp.skillatlas.client.Names;
 import com.hp.skillatlas.client.ui.Button;
@@ -140,7 +141,32 @@ public final class InfoDialog extends Dialog {
         if (check != AtlasLogic.Check.OK) {
             learn.tip(Component.translatable("skill_atlas.learn." + check.name().toLowerCase(java.util.Locale.ROOT), Names.node(n)));
         }
-        footer(new Button(Component.translatable("skill_atlas.ui.close"), this::close), learn);
+        Button close = new Button(Component.translatable("skill_atlas.ui.close"), this::close);
+        if (!ClientAtlas.refundEnabled) {
+            footer(close, learn);
+            return;
+        }
+        AtlasLogic.Refund refundCheck = ClientAtlas.refundCheck(n);
+        Button refund = new Button(Component.translatable("skill_atlas.ui.refund"), () -> ClientAtlas.refund(nodeId));
+        refund.enabled = refundCheck == AtlasLogic.Refund.OK;
+        refund.tip(refundTip(n, refundCheck));
+        footer(close, refund, learn);
+    }
+
+    public String nodeId() {
+        return nodeId;
+    }
+
+    static Component[] refundTip(SkillNode n, AtlasLogic.Refund check) {
+        String cost = String.valueOf(ClientAtlas.refundCost);
+        if (check == AtlasLogic.Refund.OK) {
+            return new Component[]{Component.translatable("skill_atlas.ui.refund.desc", cost), Component.translatable("skill_atlas.ui.refund.key", ClientEvents.REFUND.getTranslatedKeyMessage())};
+        }
+        Component blocker = Names.node(n);
+        if (check == AtlasLogic.Refund.DEPENDENT) {
+            blocker = Names.node(AtlasLogic.refundBlocker(ClientAtlas.definition, n, ClientAtlas.progress));
+        }
+        return new Component[]{Component.translatable("skill_atlas.refund." + check.name().toLowerCase(java.util.Locale.ROOT), Names.node(n), blocker, cost)};
     }
 
     private Label nodeLink(String id, Component text, float width) {

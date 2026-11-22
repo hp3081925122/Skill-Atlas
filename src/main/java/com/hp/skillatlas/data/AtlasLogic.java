@@ -13,6 +13,10 @@ public final class AtlasLogic {
         OK, MISSING, MAXED, LOCKED, EXCLUDED, NO_POINTS, NO_EXPERIENCE, NO_ITEMS
     }
 
+    public enum Refund {
+        OK, MISSING, DISABLED, NOT_LEARNED, DEPENDENT, NO_EXPERIENCE
+    }
+
     private AtlasLogic() {
     }
 
@@ -99,6 +103,58 @@ public final class AtlasLogic {
             return Check.NO_ITEMS;
         }
         return Check.OK;
+    }
+
+    public static SkillNode refundBlocker(AtlasDefinition d, SkillNode n, PlayerProgress p) {
+        int after = p.level(n.id) - 1;
+        for (SkillNode m : d.nodes.values()) {
+            if (m == n || m.id.equals(n.id) || p.level(m.id) <= 0) {
+                continue;
+            }
+            int total = 0;
+            int met = 0;
+            boolean depends = false;
+            for (Prerequisite pre : m.prerequisites) {
+                if (!d.nodes.containsKey(pre.node)) {
+                    continue;
+                }
+                total++;
+                int level = p.level(pre.node);
+                if (pre.node.equals(n.id)) {
+                    depends = true;
+                    level = after;
+                }
+                if (level > pre.level) {
+                    met++;
+                }
+            }
+            if (!depends) {
+                continue;
+            }
+            if (m.requireAll ? met < total : met == 0) {
+                return m;
+            }
+        }
+        return null;
+    }
+
+    public static Refund refundCheck(AtlasDefinition d, SkillNode n, PlayerProgress p, boolean enabled, long cost, long experience) {
+        if (n == null) {
+            return Refund.MISSING;
+        }
+        if (!enabled) {
+            return Refund.DISABLED;
+        }
+        if (p.level(n.id) <= 0) {
+            return Refund.NOT_LEARNED;
+        }
+        if (refundBlocker(d, n, p) != null) {
+            return Refund.DEPENDENT;
+        }
+        if (experience < cost) {
+            return Refund.NO_EXPERIENCE;
+        }
+        return Refund.OK;
     }
 
     public static State state(AtlasDefinition d, SkillNode n, PlayerProgress p, Predicate<List<ItemCost>> items) {

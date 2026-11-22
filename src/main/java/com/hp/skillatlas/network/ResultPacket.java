@@ -12,6 +12,7 @@ import java.util.function.Supplier;
 
 public record ResultPacket(int request, boolean ok, String key, List<String> args) {
     public static final int LEARN = -1;
+    public static final int REFUND = -2;
 
     public static void encode(ResultPacket p, FriendlyByteBuf buf) {
         buf.writeVarInt(p.request);
