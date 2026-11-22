@@ -2,9 +2,11 @@ package com.hp.skillatlas.client.screen;
 
 import com.hp.skillatlas.AtlasConfig;
 import com.hp.skillatlas.client.ClientEvents;
+import com.hp.skillatlas.client.ClientAtlas;
 import com.hp.skillatlas.client.ui.Gfx;
 import com.hp.skillatlas.client.ui.LayerStack;
 import com.hp.skillatlas.client.ui.Ui;
+import com.hp.skillatlas.data.SkillNode;
 import com.hp.skillatlas.network.ResultPacket;
 import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
@@ -127,6 +129,13 @@ public final class AtlasScreen extends Screen {
 
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
+        if (Ui.focus == null && !ClientAtlas.editMode && ClientEvents.REFUND.matches(key, scan)) {
+            String node = refundTarget();
+            if (node != null) {
+                ClientAtlas.refund(node);
+                return true;
+            }
+        }
         if (stack.key(key, scan, mods)) {
             return true;
         }
@@ -159,6 +168,19 @@ public final class AtlasScreen extends Screen {
     @Override
     public void removed() {
         Ui.reset();
+    }
+
+    private String refundTarget() {
+        if (stack.top() instanceof InfoDialog info) {
+            return info.nodeId();
+        }
+        if (main != null && stack.top() == main && main.canvas.hovered()) {
+            SkillNode n = main.canvas.nodeAt(Ui.mouseX, Ui.mouseY);
+            if (n != null) {
+                return n.id;
+            }
+        }
+        return null;
     }
 
     public void onResult(ResultPacket r) {

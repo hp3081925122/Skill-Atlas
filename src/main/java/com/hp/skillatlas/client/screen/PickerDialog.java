@@ -2,6 +2,7 @@ package com.hp.skillatlas.client.screen;
 
 import com.hp.skillatlas.SkillAtlas;
 import com.hp.skillatlas.client.ClientAtlas;
+import com.hp.skillatlas.client.GifTextures;
 import com.hp.skillatlas.client.Icons;
 import com.hp.skillatlas.client.Names;
 import com.hp.skillatlas.client.PinyinText;
@@ -180,7 +181,10 @@ public final class PickerDialog extends Dialog {
     }
 
     public static PickerDialog textures(Consumer<String> onPick) {
-        List<ResourceLocation> ids = new ArrayList<>(Minecraft.getInstance().getResourceManager().listResources("textures", rl -> rl.getPath().endsWith(".png")).keySet());
+        List<ResourceLocation> ids = new ArrayList<>(Minecraft.getInstance().getResourceManager().listResources("textures", rl -> {
+            String p = rl.getPath().toLowerCase(Locale.ROOT);
+            return p.endsWith(".png") || p.endsWith(".gif");
+        }).keySet());
         ids.sort(Comparator.comparing(ResourceLocation::toString));
         List<Entry> out = new ArrayList<>(ids.size());
         PickerDialog d = new PickerDialog(Component.translatable("skill_atlas.ui.pick.texture"), List.of(new Mode(Component.empty(), out)), "textures", e -> onPick.accept(e.id));
@@ -189,7 +193,7 @@ public final class PickerDialog extends Dialog {
             String path = rl.getPath().substring("textures/".length());
             out.add(new Entry(rl.toString(), Component.literal(rl.getNamespace() + ":" + path), (x, y, size) -> d.thumb(rl, x, y, size), modName(rl)));
         }
-        SkillAtlas.LOGGER.debug("Texture picker listed {} png resources", out.size());
+        SkillAtlas.LOGGER.debug("Texture picker listed {} png/gif resources", out.size());
         return d;
     }
 
@@ -217,6 +221,21 @@ public final class PickerDialog extends Dialog {
     }
 
     private void thumb(ResourceLocation rl, float x, float y, float size) {
+        if (GifTextures.isGif(rl)) {
+            int[] sz = GifTextures.size(rl);
+            float w = Math.max(1, sz[0]);
+            float h = Math.max(1, sz[1]);
+            float scale = size / Math.max(w, h);
+            float dw = w * scale;
+            float dh = h * scale;
+            ResourceLocation resolved = GifTextures.resolve(rl);
+            if (resolved != null) {
+                Gfx.texture(resolved, x + (size - dw) / 2.0F, y + (size - dh) / 2.0F, dw, dh, 0xFFFFFFFF);
+            } else {
+                Gfx.fill(x + (size - dw) / 2.0F, y + (size - dh) / 2.0F, dw, dh, 0x33FFFFFF);
+            }
+            return;
+        }
         if (Minecraft.getInstance().getTextureManager().getTexture(rl, null) == null) {
             thumbs.add(rl);
         }

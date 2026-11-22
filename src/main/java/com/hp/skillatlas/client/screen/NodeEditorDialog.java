@@ -317,6 +317,15 @@ public final class NodeEditorDialog extends Dialog {
         });
         f.row(Component.translatable("skill_atlas.ui.field.requirement"), req);
         hint(f, Component.translatable("skill_atlas.ui.editor.hidden_hint"), Theme.DIM);
+        TextInput choice = text(n.choiceGroup, 64, Section.FLAGS, v -> {
+            if (v.isEmpty() || Json.validId(v)) {
+                n.choiceGroup = v;
+            }
+        }).filter(v -> v.matches("[a-z0-9_.\\-]*"));
+        choice.valid = v -> v.isEmpty() || Json.validId(v);
+        choice.tip(Component.translatable("skill_atlas.ui.field.choice_group.desc"));
+        f.row(Component.translatable("skill_atlas.ui.field.choice_group"), choice);
+        hint(f, Component.translatable("skill_atlas.ui.editor.choice_hint"), Theme.DIM);
 
         heading(f, Section.PREREQUISITES, "skill_atlas.ui.editor.section.prerequisites");
         if (n.prerequisites.isEmpty()) {
@@ -435,6 +444,7 @@ public final class NodeEditorDialog extends Dialog {
         if (applied.contains(Section.FLAGS)) {
             c.hidden = n.hidden;
             c.requireAll = n.requireAll;
+            c.choiceGroup = n.choiceGroup;
         }
         if (applied.contains(Section.PREREQUISITES)) {
             c.prerequisites.clear();

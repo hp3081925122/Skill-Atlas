@@ -10,7 +10,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 
-public record ProgressPacket(CompoundTag progress, boolean canEdit) implements CustomPacketPayload {
+public record ProgressPacket(CompoundTag progress, boolean canEdit, boolean refund, int refundCost) implements CustomPacketPayload {
     public static final Type<ProgressPacket> TYPE = new Type<>(SkillAtlas.id("progress"));
     public static final StreamCodec<RegistryFriendlyByteBuf, ProgressPacket> STREAM_CODEC = StreamCodec.of((buffer, packet) -> encode(packet, buffer), ProgressPacket::decode);
 
@@ -21,6 +21,8 @@ public record ProgressPacket(CompoundTag progress, boolean canEdit) implements C
     public static void encode(ProgressPacket p, FriendlyByteBuf buf) {
         buf.writeNbt(p.progress);
         buf.writeBoolean(p.canEdit);
+        buf.writeBoolean(p.refund);
+        buf.writeVarInt(p.refundCost);
     }
 
     public static ProgressPacket decode(FriendlyByteBuf buf) {
@@ -28,7 +30,7 @@ public record ProgressPacket(CompoundTag progress, boolean canEdit) implements C
         if (tag == null) {
             tag = new CompoundTag();
         }
-        return new ProgressPacket(tag, buf.readBoolean());
+        return new ProgressPacket(tag, buf.readBoolean(), buf.readBoolean(), buf.readVarInt());
     }
 
     public static void handle(ProgressPacket p, IPayloadContext context) {

@@ -26,6 +26,7 @@ public final class SkillNode {
     public double size = 1.0D;
     public boolean hidden;
     public boolean requireAll = true;
+    public String choiceGroup = "";
     public final List<Prerequisite> prerequisites = new ArrayList<>();
     public final List<SkillLevel> levels = new ArrayList<>();
 
@@ -56,6 +57,7 @@ public final class SkillNode {
         n.size = size;
         n.hidden = hidden;
         n.requireAll = requireAll;
+        n.choiceGroup = choiceGroup;
         for (Prerequisite p : prerequisites) {
             n.prerequisites.add(p.copy());
         }
@@ -84,6 +86,9 @@ public final class SkillNode {
             o.addProperty("requirement", "all");
         } else {
             o.addProperty("requirement", "any");
+        }
+        if (!choiceGroup.isEmpty()) {
+            o.addProperty("choice_group", choiceGroup);
         }
         JsonArray pre = new JsonArray();
         for (Prerequisite p : prerequisites) {
@@ -119,6 +124,10 @@ public final class SkillNode {
             n.requireAll = false;
         } else {
             throw new AtlasException("skill_atlas.error.bad_field", "requirement");
+        }
+        n.choiceGroup = Json.string(o, "choice_group", "", 64);
+        if (!n.choiceGroup.isEmpty() && !Json.validId(n.choiceGroup)) {
+            throw new AtlasException("skill_atlas.error.bad_field", "choice_group");
         }
         n.prerequisites.addAll(Json.list(o, "prerequisites", MAX_PREREQUISITES, Prerequisite::fromJson));
         n.levels.addAll(Json.list(o, "levels", MAX_LEVELS, SkillLevel::fromJson));

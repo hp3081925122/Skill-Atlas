@@ -7,6 +7,8 @@ public final class AtlasConfig {
     public static final ModConfigSpec.IntValue EDIT_PERMISSION;
     public static final ModConfigSpec.BooleanValue COUNT_CREATIVE;
     public static final ModConfigSpec.BooleanValue NOTIFY_POINTS;
+    public static final ModConfigSpec.BooleanValue REFUND_ENABLED;
+    public static final ModConfigSpec.IntValue REFUND_COST;
 
     public static final ModConfigSpec CLIENT_SPEC;
     public static final ModConfigSpec.IntValue VIRTUAL_HEIGHT;
@@ -25,6 +27,12 @@ public final class AtlasConfig {
         NOTIFY_POINTS = server
                 .comment("获得技能点时是否在动作栏提示 / Show an action bar message when skill points are gained")
                 .define("notifyPointGain", true);
+        REFUND_ENABLED = server
+                .comment("是否允许玩家消耗经验回退技能等级 / Whether players can spend experience to refund a skill level")
+                .define("allowSkillRefund", true);
+        REFUND_COST = server
+                .comment("每回退一级技能消耗的经验值（经验点数，非等级） / Experience points (not levels) consumed per refunded skill level")
+                .defineInRange("refundExperienceCost", 100, 0, 1_000_000_000);
         SERVER_SPEC = server.build();
 
         ModConfigSpec.Builder client = new ModConfigSpec.Builder();

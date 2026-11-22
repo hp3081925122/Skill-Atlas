@@ -7,8 +7,10 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.settings.KeyConflictContext;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -19,6 +21,7 @@ import org.lwjgl.glfw.GLFW;
 
 public final class ClientEvents {
     public static final KeyMapping OPEN = new KeyMapping("key.skill_atlas.open", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_K, "key.categories.skill_atlas");
+    public static final KeyMapping REFUND = new KeyMapping("key.skill_atlas.refund", KeyConflictContext.GUI, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, "key.categories.skill_atlas");
 
     private ClientEvents() {
     }
@@ -31,11 +34,17 @@ public final class ClientEvents {
         @SubscribeEvent
         public static void onKeys(RegisterKeyMappingsEvent event) {
             event.register(OPEN);
+            event.register(REFUND);
         }
 
         @SubscribeEvent
         public static void onSetup(FMLClientSetupEvent event) {
             Texts.lookup = raw -> ClientAtlas.definition.texts.display(raw, Minecraft.getInstance().getLanguageManager().getSelected());
+        }
+
+        @SubscribeEvent
+        public static void onReloadListeners(RegisterClientReloadListenersEvent event) {
+            event.registerReloadListener((ResourceManagerReloadListener) rm -> GifTextures.clear());
         }
     }
 
@@ -63,6 +72,7 @@ public final class ClientEvents {
         @SubscribeEvent
         public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
             ClientPackets.reset();
+            GifTextures.clear();
         }
     }
 }

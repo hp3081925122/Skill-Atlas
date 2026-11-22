@@ -20,6 +20,7 @@ public record ResultPacket(int request, boolean ok, String key, List<String> arg
         return TYPE;
     }
     public static final int LEARN = -1;
+    public static final int REFUND = -2;
 
     public static void encode(ResultPacket p, FriendlyByteBuf buf) {
         buf.writeVarInt(p.request);

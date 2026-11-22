@@ -30,7 +30,7 @@ public final class ClientPackets {
     }
 
     public static void progress(ProgressPacket p) {
-        ClientAtlas.onProgress(PlayerProgress.load(p.progress()), p.canEdit());
+        ClientAtlas.onProgress(PlayerProgress.load(p.progress()), p.canEdit(), p.refund(), p.refundCost());
     }
 
     public static void result(ResultPacket r) {

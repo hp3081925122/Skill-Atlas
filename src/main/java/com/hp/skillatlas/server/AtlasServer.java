@@ -396,7 +396,7 @@ public final class AtlasServer {
         CompoundTag tag = current.save();
         tag.remove("payments");
         tag.remove("seeded");
-        PacketDistributor.sendToPlayer(player, new ProgressPacket(tag, canEdit(player)));
+        PacketDistributor.sendToPlayer(player, new ProgressPacket(tag, canEdit(player), AtlasConfig.REFUND_ENABLED.get(), AtlasConfig.REFUND_COST.get()));
     }
 
     public static void result(ServerPlayer player, int request, boolean ok, String key, List<String> args) {
@@ -559,6 +559,38 @@ public final class AtlasServer {
         RewardManager.runCommands(player, next);
         sendProgress(player);
         result(player, ResultPacket.LEARN, true, "skill_atlas.learn.ok", List.of(n.id, String.valueOf(level + 1)));
+    }
+
+    public static void refund(ServerPlayer player, String nodeId) {
+        PlayerProgress p = progress(player);
+        SkillNode n = definition.nodes.get(nodeId);
+        int cost = AtlasConfig.REFUND_COST.get();
+        AtlasLogic.Refund check = AtlasLogic.refundCheck(definition, n, p, AtlasConfig.REFUND_ENABLED.get(), cost, ExperienceCosts.available(player));
+        if (check != AtlasLogic.Refund.OK) {
+            String blocker = nodeId;
+            if (check == AtlasLogic.Refund.DEPENDENT) {
+                blocker = AtlasLogic.refundBlocker(definition, n, p).id;
+            }
+            result(player, ResultPacket.REFUND, false, "skill_atlas.refund." + check.name().toLowerCase(Locale.ROOT), List.of(nodeId, blocker, String.valueOf(cost)));
+            sendProgress(player);
+            return;
+        }
+        if (!ExperienceCosts.spend(player, cost)) {
+            result(player, ResultPacket.REFUND, false, "skill_atlas.refund.experience_blocked", List.of(nodeId, nodeId, String.valueOf(cost)));
+            sendProgress(player);
+            return;
+        }
+        int level = p.level(nodeId);
+        int after = grant(player, n, level - 1);
+        if (progress(player).level(nodeId) != level - 1) {
+            ExperienceCosts.refund(player, cost);
+            SkillAtlas.LOGGER.debug("Refund of {} for {} was not applied, returned {} experience points", nodeId, player.getGameProfile().getName(), cost);
+            result(player, ResultPacket.REFUND, false, "skill_atlas.refund.failed", List.of(nodeId, nodeId, String.valueOf(cost)));
+            sendProgress(player);
+            return;
+        }
+        SkillAtlas.LOGGER.debug("{} refunded {} to level {} for {} experience points", player.getGameProfile().getName(), nodeId, after, cost);
+        result(player, ResultPacket.REFUND, true, "skill_atlas.refund.ok", List.of(nodeId, String.valueOf(after), String.valueOf(cost)));
     }
 
     public static int grant(ServerPlayer player, SkillNode n, int target) {
