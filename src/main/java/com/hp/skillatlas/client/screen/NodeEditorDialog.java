@@ -414,7 +414,18 @@ public final class NodeEditorDialog extends Dialog {
         });
         addLevel.icon = Sprites.PLUS;
         addLevel.enabled = n.levels.size() < SkillNode.MAX_LEVELS;
-        f.full(addLevel, 16);
+        Button formula = new Button(Component.translatable("skill_atlas.ui.editor.formula_generate"), () -> {
+            Component formulaTitle = Component.translatable("skill_atlas.ui.formula.title", Names.node(n));
+            stack.push(new FormulaDialog(formulaTitle, n.levels, ClientAtlas.definition.poolOf(n), generated -> {
+                n.levels.clear();
+                n.levels.addAll(generated);
+                touch(Section.LEVELS);
+                rebuild();
+            }));
+        });
+        formula.icon = Sprites.GEAR;
+        formula.tip(Component.translatable("skill_atlas.ui.editor.formula_generate.desc"));
+        f.cells(null, new float[]{1, 1}, addLevel, formula);
         f.finish();
 
         Button cancel = new Button(Component.translatable("skill_atlas.ui.cancel"), this::close);
